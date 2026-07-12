@@ -137,8 +137,8 @@ body.dragging-any{user-select:none;-webkit-user-select:none;cursor:grabbing;}
 .row-info{flex:1;min-width:150px;}
 .row-controls{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
 .row-label{font-size:13.5px;font-weight:600;line-height:1.25;}
-.entry-pill{font-size:10.5px;color:var(--ink-soft);background:var(--neutral-bg);padding:2px 7px;border-radius:5px;margin-top:2px;display:inline-block;max-width:100%;}
-.entry-pill b{color:var(--ink);}
+.entry-pill{font-size:11px;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:6px;margin-top:3px;display:inline-block;max-width:100%;font-weight:500;}
+.entry-pill b{color:var(--accent);font-weight:700;}
 .btn-group{display:flex;gap:5px;flex-wrap:wrap;}
 .opt-btn{min-height:34px;padding:4px 9px;border-radius:8px;border:1.5px solid var(--line);background:#F7FAFC;color:var(--ink-soft);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
 .opt-btn.sel-TB,.opt-btn.sel-Bon,.opt-btn.sel-B{background:var(--good-bg);border-color:var(--good);color:var(--good);}
@@ -197,6 +197,17 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
 .report-line.diff .c-out{color:var(--warn);font-weight:600;}
 /* keep old single-column value style available if referenced */
 .report-line .vals{color:var(--ink-soft);text-align:right;grid-column:2 / span 2;}
+.report-doctitle{font-family:'DM Serif Display',Georgia,serif;font-size:27px;line-height:1.1;letter-spacing:.02em;color:var(--accent);text-align:center;margin:0 0 4px;}
+.report-address{font-size:16px;text-align:center;color:var(--ink);margin:0 0 14px;}
+.report-keyinfo{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:14px 18px;}
+.report-keyinfo .ki{display:flex;flex-direction:column;gap:1px;}
+.report-keyinfo .ki-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);}
+.report-keyinfo .ki-value{font-size:15px;font-weight:700;color:var(--ink);}
+.report-keyinfo .ki.tenant .ki-value{font-size:18px;color:var(--accent);}
+.report-subinfo{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:8px;}
+.sig-pending{border:1px dashed var(--accent);background:var(--accent-soft);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--accent);line-height:1.35;}
+.sig-defer-opt{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.3;}
+.sig-defer-opt input{margin-top:2px;flex-shrink:0;}
 .report-note{font-size:12px;color:var(--ink-soft);font-style:italic;margin-top:2px;}
 .report-actions{display:flex;gap:10px;margin:24px 0;flex-wrap:wrap;}
 .report-actions button{padding:12px 18px;border-radius:10px;border:none;font-weight:600;font-size:14px;cursor:pointer;}
@@ -363,7 +374,7 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
     <h2 style="font-size:16px;margin:0 0 4px;" data-fr-text="Signatures — &quot;Lu et approuvé&quot;">Signatures — "Lu et approuvé"</h2>
     <p style="font-size:12px;color:var(--ink-soft);margin:0 0 14px;" data-fr-text="Signez, puis appuyez sur « Valider » pour figer et dater la signature.">Signez, puis appuyez sur « Valider » pour figer et dater la signature.</p>
 
-    <h3 class="sig-moment" data-fr-text="État d&#39;entrée (check-in)">État d'entrée (check-in)</h3>
+    <div id="sigGroupEntree"><h3 class="sig-moment" data-fr-text="État d&#39;entrée (check-in)">État d'entrée (check-in)</h3>
     <div class="sig-grid">
       <div class="sig-block" id="block_sigEntreeBailleur"><h3 data-fr-text="Le bailleur (ou son mandataire)">Le bailleur (ou son mandataire)</h3><canvas class="sigpad" id="sigEntreeBailleur"></canvas>
         <div class="sig-actions"><span class="sig-name" id="name_sigEntreeBailleur"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigEntreeBailleur&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigEntreeBailleur&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigEntreeBailleur&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
@@ -372,8 +383,9 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
         <div class="sig-actions"><span class="sig-name" id="name_sigEntreeLocataire"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigEntreeLocataire&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigEntreeLocataire&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigEntreeLocataire&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
         <div class="sig-date" id="date_sigEntreeLocataire"></div></div>
     </div>
-
-    <h3 class="sig-moment" data-fr-text="État de sortie (check-out)">État de sortie (check-out)</h3>
+      <label class="sig-defer-opt"><input type="checkbox" id="deferEntree"><span data-fr-text="Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux à retourner signé au bailleur (le locataire dispose de 10 jours pour en demander la rectification).">Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux à retourner signé au bailleur (le locataire dispose de 10 jours pour en demander la rectification).</span></label>
+    </div>
+    <div id="sigGroupSortie"><h3 class="sig-moment" data-fr-text="État de sortie (check-out)">État de sortie (check-out)</h3>
     <div class="sig-grid">
       <div class="sig-block" id="block_sigSortieBailleur"><h3 data-fr-text="Le bailleur (ou son mandataire)">Le bailleur (ou son mandataire)</h3><canvas class="sigpad" id="sigSortieBailleur"></canvas>
         <div class="sig-actions"><span class="sig-name" id="name_sigSortieBailleur"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigSortieBailleur&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigSortieBailleur&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigSortieBailleur&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
@@ -381,6 +393,15 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
       <div class="sig-block" id="block_sigSortieLocataire"><h3 data-fr-text="Le locataire">Le locataire</h3><canvas class="sigpad" id="sigSortieLocataire"></canvas>
         <div class="sig-actions"><span class="sig-name" id="name_sigSortieLocataire"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigSortieLocataire&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigSortieLocataire&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigSortieLocataire&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
         <div class="sig-date" id="date_sigSortieLocataire"></div></div>
+    </div>
+      <label class="sig-defer-opt"><input type="checkbox" id="deferSortie"><span data-fr-text="Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux de sortie à retourner signé au bailleur dans le délai légal.">Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux de sortie à retourner signé au bailleur dans le délai légal.</span></label>
+    </div>
+    <div id="sigGroupCheckFinal" class="hidden"><h3 class="sig-moment" data-fr-text="Contrôle final (check final) — pré-état des lieux">Contrôle final (check final) — pré-état des lieux</h3>
+    <div class="sig-grid">
+      <div class="sig-block" id="block_sigCheckFinalBailleur"><h3 data-fr-text="Le bailleur (ou son mandataire)">Le bailleur (ou son mandataire)</h3><canvas class="sigpad" id="sigCheckFinalBailleur"></canvas>
+        <div class="sig-actions"><span class="sig-name" id="name_sigCheckFinalBailleur"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigCheckFinalBailleur&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigCheckFinalBailleur&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigCheckFinalBailleur&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
+        <div class="sig-date" id="date_sigCheckFinalBailleur"></div></div>
+    </div>
     </div>
   </div>
 </main>
@@ -1095,7 +1116,13 @@ function populateMetaFields(){
     };
   });
   document.getElementById('nonFrancophone').onchange = scheduleSave;
+  document.getElementById('deferEntree').checked = !!m.deferEntree;
+  document.getElementById('deferSortie').checked = !!m.deferSortie;
+  document.getElementById('deferEntree').onchange = scheduleSave;
+  document.getElementById('deferSortie').onchange = scheduleSave;
+  document.getElementById('sendType').addEventListener('change', ()=>{ updateSigVisibility(); requestAnimationFrame(()=>sizeSignatures(true)); });
   restoreAllSigs(m);
+  updateSigVisibility();
 }
 function restoreAllSigs(m){
   let sigs = m.sigs;
@@ -1118,9 +1145,17 @@ function updateInspTenantLine(){
   const setName=(id,val)=>{ const el=document.getElementById('name_'+id); if(el) el.textContent=val; };
   setName('sigEntreeBailleur', bailleurName); setName('sigSortieBailleur', bailleurName);
   setName('sigEntreeLocataire', tenantName); setName('sigSortieLocataire', tenantName);
+  setName('sigCheckFinalBailleur', bailleurName);
 }
 
 /* ============ MODE ============ */
+function updateSigVisibility(){
+  const st = (document.getElementById('sendType')||{}).value;
+  const sgE=document.getElementById('sigGroupEntree'), sgS=document.getElementById('sigGroupSortie'), sgC=document.getElementById('sigGroupCheckFinal');
+  if(sgE) sgE.classList.toggle('hidden', mode!=='entree');
+  if(sgS) sgS.classList.toggle('hidden', mode!=='sortie');
+  if(sgC) sgC.classList.toggle('hidden', !(mode==='sortie' && st==='pre'));
+}
 function setMode(m){
   mode = m;
   document.getElementById('modeEntreeBtn').classList.toggle('active', m==='entree');
@@ -1130,6 +1165,8 @@ function setMode(m){
   document.getElementById('lockBannerWrap').innerHTML = (m==='entree' && currentEdl.entryArchived)
     ? `<div class="lock-banner">🔒 ${L("État des lieux d'entrée archivé le","Move-in inspection archived on")} ${currentEdl.entryArchivedAt? new Date(currentEdl.entryArchivedAt).toLocaleDateString(uiLang==='en'?'en-GB':'fr-FR'):''}. ${L("Il sert de référence pour la sortie.","It serves as the reference for the move-out.")}</div>` : '';
   document.getElementById('sections').classList.toggle('locked', m==='entree' && currentEdl.entryArchived);
+  // Signatures : entrée en onglet Entrée, sortie en onglet Sortie ; check final si pré-rapport (toutes dans le rapport)
+  updateSigVisibility();
   render();
   requestAnimationFrame(()=>sizeSignatures(true));
 }
@@ -1514,10 +1551,10 @@ function render(){
       if(grp.title){
         const gh = document.createElement('div'); gh.className='subgroup-head';
         gh.style.background = pal.s; gh.style.borderBottomColor = pal.m;
-        const rasLabel = mode==='sortie' ? L('✓ RAS','✓ Same as move-in') : L('✓ Tout TB/Bon',"✓ All Exc/Good");
+        const rasLabel = mode==='sortie' ? L('✓ RAS','✓ Same as move-in') : L('✓ Tout Très bon','✓ All Excellent');
         gh.innerHTML = `<span class="subgroup-title" style="color:${pal.d};">${escapeHtml(dispLabel(grp.title))}</span>
           <span class="subgroup-actions">
-            ${gRows.length? `<button type="button" class="group-ras-btn" data-sec="${sec.id}" data-gid="${grp.id}" title="${mode==='sortie'?L("Tout marquer identique à l'entrée","Mark all same as move-in"):L("Tout marquer Très bon / Bon","Mark all Excellent / Good")}">${rasLabel}</button>`:''}
+            ${gRows.length? `<button type="button" class="group-ras-btn" data-sec="${sec.id}" data-gid="${grp.id}" title="${mode==='sortie'?L("Tout marquer identique à l'entrée (RAS)","Mark all same as move-in"):L("Tout marquer Très bon","Mark all Excellent")}">${rasLabel}</button>`:''}
             <button type="button" class="group-add-btn" data-sec="${sec.id}" data-gid="${grp.id}">${L('＋ Poste','＋ Item')}</button>
             <button type="button" class="group-del-btn" data-sec="${sec.id}" data-gid="${grp.id}" title="${L('Supprimer ce pavé','Delete this block')}">🗑</button>
             <button type="button" class="group-move-btn" data-sec="${sec.id}" data-gid="${grp.id}" data-dir="-1" ${gi===0?'disabled':''}>↑</button>
@@ -1557,7 +1594,7 @@ function render(){
 function entryPillText(refObj){
   if(!refObj) return '';
   let parts=[];
-  if(refObj.qty!==undefined && refObj.qty!=='') parts.push(`<b>${refObj.qty}</b>`);
+  if(refObj.qty!==undefined && refObj.qty!=='') parts.push(`${L('Qté','Qty')} <b>${refObj.qty}</b>`);
   if(refObj.value) parts.push(`<b>${dispOpt(refObj.value)}</b>`);
   if(refObj.meter) parts.push(`<b>${escapeHtml(refObj.meter)}</b>`);
   if(refObj.note) parts.push(escapeHtml(refObj.note));
@@ -1738,23 +1775,33 @@ function findGroup(secId, gid){
   const sec = currentProp.template.find(s=>s.id===secId); if(!sec) return {};
   return {sec, grp: sec.groups.find(g=>g.id===gid)};
 }
+function reflectRowUI(id){
+  const s = (currentStore()[id]) || {};
+  const btns = document.querySelectorAll(`.opt-btn[data-id="${id}"]`);
+  btns.forEach(b=>b.classList.remove('sel-TB','sel-B','sel-P','sel-M','sel-Bon','sel-Usage','sel-Mauvais','sel-Manquant'));
+  if(s.value) btns.forEach(b=>{ if(b.dataset.val===s.value) b.classList.add('sel-'+s.value); });
+  const qi=document.querySelector(`[data-qty="${id}"]`); if(qi && s.qty!==undefined) qi.value=s.qty;
+  const mi=document.querySelector(`[data-meter="${id}"]`); if(mi && s.meter!==undefined) mi.value=s.meter;
+  const ni=document.querySelector(`[data-note-input="${id}"]`);
+  if(ni && s.note!==undefined){ ni.value=s.note; const box=document.querySelector(`[data-note-box="${id}"]`); if(box && s.note) box.classList.add('show'); }
+}
 function groupRAS(secId, gid){
   if(mode==='entree' && currentEdl.entryArchived) return;
   const {grp} = findGroup(secId, gid); if(!grp) return;
   const store = currentStore();
   visibleGroupRows(grp).forEach(row=>{
-    const ref = currentEdl.entry[row.id]||{};
-    store[row.id] = store[row.id]||{};
     if(mode==='sortie'){
-      if(row.kind==='etat'){ store[row.id].value = ref.value || 'TB'; }
-      else if(row.kind==='item'){ store[row.id].value = ref.value||'Bon'; if(ref.qty!==undefined && ref.qty!=='') store[row.id].qty = ref.qty; }
-      else if(row.kind==='keys'){ if(ref.qty!==undefined && ref.qty!=='') store[row.id].qty = ref.qty; }
+      // RAS = état de sortie strictement identique à l'entrée (copie exacte)
+      const ref = currentEdl.entry[row.id];
+      store[row.id] = ref ? JSON.parse(JSON.stringify(ref)) : {};
     } else {
-      if(row.kind==='etat') store[row.id].value = 'TB';
-      else if(row.kind==='item') store[row.id].value = 'Bon';
+      // Entrée : tout marquer « Très bon »
+      store[row.id] = store[row.id] || {};
+      if(row.kind==='etat' || row.kind==='item') store[row.id].value = 'TB';
     }
+    reflectRowUI(row.id); // mise à jour sur place : pas de re-render, pas de saut de page
   });
-  scheduleSave(); render();
+  scheduleSave(); updateProgress();
 }
 async function addPostInGroup(secId, gid){
   const {grp} = findGroup(secId, gid); if(!grp) return;
@@ -1819,7 +1866,7 @@ function sizeSigCanvas(canvasId, preserve){
     img.src=saved;
   }
 }
-const SIG_IDS = ['sigEntreeBailleur','sigEntreeLocataire','sigSortieBailleur','sigSortieLocataire'];
+const SIG_IDS = ['sigEntreeBailleur','sigEntreeLocataire','sigSortieBailleur','sigSortieLocataire','sigCheckFinalBailleur'];
 function sizeSignatures(preserve){
   SIG_IDS.forEach(function(id){ sizeSigCanvas(id, preserve!==false); });
 }
@@ -1959,6 +2006,7 @@ async function saveNow(){
       tenantNameField: document.getElementById('tenantNameField').value, bailleurEmail: document.getElementById('bailleurEmail').value,
       tenantEmail: document.getElementById('tenantEmail').value, tenantNewAddress: document.getElementById('tenantNewAddress').value,
       checkFinalDate: document.getElementById('checkFinalDate').value, sendType: document.getElementById('sendType').value,
+      deferEntree: document.getElementById('deferEntree').checked, deferSortie: document.getElementById('deferSortie').checked,
       nonFrancophone: document.getElementById('nonFrancophone').checked, observations: document.getElementById('observations').value,
       sigs: collectSigs(),
     });
@@ -2169,9 +2217,16 @@ async function openReport(){
 
   let html='';
   if(sendType==='pre') html += `<div class="pre-banner">${lang==='en'?`PRELIMINARY REPORT — subject to confirmation after the final walk-through on ${checkFinal}`:`PRÉ-RAPPORT — sous réserve de confirmation après le contrôle final du ${checkFinal}`}</div>`;
-  html += `<p class="serif" style="font-size:20px;margin:0;">${escapeHtml(currentProp.address)}</p>
-    <p style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${lang==='en'?'Tenant':'Locataire'} : ${escapeHtml(tenant)} · ${lang==='en'?'Move-in':'Entrée'} : ${dateEntree} · ${lang==='en'?'Move-out':'Sortie'} : ${dateSortie} · ${lang==='en'?'Drawn up in':'Fait à'} ${escapeHtml(lieu)}${tenantNewAddress?` · ${lang==='en'?'Forwarding address':'Nouvelle adresse'} : ${escapeHtml(tenantNewAddress)}`:''}</p>
-    <p style="font-size:11.5px;color:var(--ink-soft);margin:8px 0 0;">${lang==='en'
+  html += `<div class="report-doctitle">${lang==='en'?'INVENTORY OF FIXTURES':'ÉTAT DES LIEUX'}</div>
+    <div class="report-address serif">${escapeHtml(currentProp.address)}</div>
+    <div class="report-keyinfo">
+      <div class="ki tenant"><span class="ki-label">${lang==='en'?'Tenant':'Locataire'}</span><span class="ki-value">${escapeHtml(tenant)||'—'}</span></div>
+      <div class="ki"><span class="ki-label">${lang==='en'?'Landlord / agent':'Bailleur / mandataire'}</span><span class="ki-value">${escapeHtml(agent)||'—'}</span></div>
+      <div class="ki"><span class="ki-label">${lang==='en'?'Move-in date':"Date d'entrée"}</span><span class="ki-value">${dateEntree||'—'}</span></div>
+      <div class="ki"><span class="ki-label">${lang==='en'?'Move-out date':'Date de sortie'}</span><span class="ki-value">${dateSortie||'—'}</span></div>
+    </div>
+    <div class="report-subinfo">${lang==='en'?'Drawn up in':'Fait à'} ${escapeHtml(lieu)}${tenantNewAddress?` · ${lang==='en'?'Tenant forwarding address':'Nouvelle adresse du locataire'} : ${escapeHtml(tenantNewAddress)}`:''}</div>`;
+  html += `<p style="font-size:11.5px;color:var(--ink-soft);margin:14px 0 0;">${lang==='en'
       ? 'Reading key: for each item, the <b>Move-in</b> column shows the condition recorded at check-in and the <b>Move-out</b> column the condition at check-out (Qty = quantity).'
       : 'Clé de lecture : pour chaque poste, la colonne <b>Entrée</b> indique l\u2019état constaté à l\u2019entrée et la colonne <b>Sortie</b> celui constaté à la sortie (Qté = quantité).'}</p>
     <div class="legal-box" style="margin-top:14px;">${lang==='en'?LEGAL_EN:"L'état des lieux doit être établi de façon contradictoire entre les deux parties lors de la remise des clés au locataire et lors de leur restitution en fin de bail, conformément à l'article 3 de la loi n°89-462 du 6 juillet 1989. Il fait partie du contrat de location, dont il ne peut être dissocié. L'état des lieux d'entrée peut être complété par le locataire dans les 10 jours suivant sa tenue (et pendant le 1er mois de chauffe pour les éléments de chauffage)."}</div>`;
@@ -2212,24 +2267,45 @@ async function openReport(){
     const p=n=>String(n).padStart(2,'0');
     return (lang==='en'?'signed on ':'signé le ')+p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+(lang==='en'?' at ':' à ')+p(d.getHours())+'h'+p(d.getMinutes());
   }
-  function sigCell(info, role, name){
+  function sigCell(info, role, name, pendingMention){
+    let body;
+    if(info.signed){
+      body = `<img src="${info.img}" style="height:70px;border:1px solid var(--line);border-radius:6px;background:#fff;display:block;max-width:100%;">
+           <div style="font-size:11px;color:var(--good);font-weight:600;margin-top:3px;">${t('signé',lang)} ✓ · ${sigStamp(info.at)}</div>`;
+    } else if(pendingMention){
+      body = `<div class="sig-pending">${pendingMention}</div>`;
+    } else {
+      body = `<div style="height:70px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;">${t('non signé',lang)}</div>`;
+    }
     return `<div style="flex:1;min-width:180px;">
       <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">${role}${name?' — '+escapeHtml(name):''}</div>
-      ${info.signed
-        ? `<img src="${info.img}" style="height:70px;border:1px solid var(--line);border-radius:6px;background:#fff;display:block;max-width:100%;">
-           <div style="font-size:11px;color:var(--good);font-weight:600;margin-top:3px;">${t('signé',lang)} ✓ · ${sigStamp(info.at)}</div>`
-        : `<div style="height:70px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;">${t('non signé',lang)}</div>`}
+      ${body}
     </div>`;
   }
-  function sigPair(momentLabel, bId, lId){
+  function sigPair(momentLabel, bId, lId, tenantPending){
     return `<div style="margin-top:12px;break-inside:avoid;">
       <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">${momentLabel}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo(bId), t('Bailleur',lang), agent)}${sigCell(sigInfo(lId), t('Locataire',lang), tenant)}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo(bId), t('Bailleur',lang), agent, null)}${sigCell(sigInfo(lId), t('Locataire',lang), tenant, tenantPending)}</div>
     </div>`;
   }
   html += `<h3>${t('Signatures',lang)}</h3>`;
-  html += sigPair(lang==='en'?'Check-in':"État d'entrée", 'sigEntreeBailleur','sigEntreeLocataire');
-  html += sigPair(lang==='en'?'Check-out':"État de sortie", 'sigSortieBailleur','sigSortieLocataire');
+  const deferE = !!(document.getElementById('deferEntree') && document.getElementById('deferEntree').checked);
+  const deferS = !!(document.getElementById('deferSortie') && document.getElementById('deferSortie').checked);
+  const mentionEntree = lang==='en'
+    ? "Tenant's signature pending — this move-in inventory is handed to the tenant and must be returned signed to the landlord. The tenant has 10 days to request corrections (Art. 3, Law No. 89-462 of 6 July 1989)."
+    : "Signature du locataire en attente — le présent état des lieux d'entrée est remis au locataire et doit être retourné signé au bailleur. Le locataire dispose d'un délai de 10 jours pour en demander la rectification (art. 3, loi n°89-462 du 6 juillet 1989).";
+  const mentionSortie = lang==='en'
+    ? "Tenant's signature pending — this move-out inventory must be returned signed to the landlord within the legal time frame."
+    : "Signature du locataire en attente — le présent état des lieux de sortie est à retourner signé au bailleur dans le délai légal.";
+  html += sigPair(lang==='en'?'Check-in':"État d'entrée", 'sigEntreeBailleur','sigEntreeLocataire', (!sigInfo('sigEntreeLocataire').signed && deferE)?mentionEntree:null);
+  html += sigPair(lang==='en'?'Check-out':"État de sortie", 'sigSortieBailleur','sigSortieLocataire', (!sigInfo('sigSortieLocataire').signed && deferS)?mentionSortie:null);
+  if(sendType==='pre'){
+    const cfLabel = (lang==='en'?'Final check (final walk-through)':'Contrôle final (check final)') + (checkFinal?` — ${checkFinal}`:'');
+    html += `<div style="margin-top:12px;break-inside:avoid;">
+      <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">${cfLabel}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo('sigCheckFinalBailleur'), t('Bailleur',lang), agent, null)}</div>
+    </div>`;
+  }
   html += `
     <div class="report-actions">
       <button class="btn-primary" onclick="window.print()">${lang==='en'?'Print / Save as PDF':'Imprimer / Enregistrer en PDF'}</button>
