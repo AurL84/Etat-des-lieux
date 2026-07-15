@@ -197,6 +197,20 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
 .report-line.diff .c-out{color:var(--warn);font-weight:600;}
 /* keep old single-column value style available if referenced */
 .report-line .vals{color:var(--ink-soft);text-align:right;grid-column:2 / span 2;}
+/* ===== Photos ===== */
+.photo-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px;}
+.photo-add-btn{font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600;cursor:pointer;min-height:30px;}
+.photo-add-btn:disabled{opacity:.45;}
+.photo-thumb{position:relative;display:inline-block;width:54px;height:54px;border-radius:7px;overflow:hidden;border:1px solid var(--line);background:#F0F4F8;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;}
+.photo-del{position:absolute;top:0;right:0;width:19px;height:19px;line-height:17px;text-align:center;border:none;border-radius:0 0 0 7px;background:rgba(20,35,50,.62);color:#fff;font-size:13px;cursor:pointer;padding:0;}
+.photo-count{font-size:11px;color:var(--ink-soft);}
+.locked .photo-add-btn,.locked .photo-del{pointer-events:none;opacity:.45;}
+/* Photos dans le rapport */
+.rep-photo-group{display:flex;gap:8px;align-items:flex-start;margin:2px 0 8px;padding-left:8px;break-inside:avoid;page-break-inside:avoid;}
+.rep-photo-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding-top:5px;flex-shrink:0;width:56px;}
+.rep-photo-strip{display:flex;gap:6px;flex-wrap:wrap;}
+.rep-photo{width:118px;height:88px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
 .report-doctitle{font-family:'DM Serif Display',Georgia,serif;font-size:27px;line-height:1.1;letter-spacing:.02em;color:var(--accent);text-align:center;margin:0 0 4px;}
 .report-address{font-size:16px;text-align:center;color:var(--ink);margin:0 0 14px;}
 .report-keyinfo{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:14px 18px;}
@@ -205,9 +219,6 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
 .report-keyinfo .ki-value{font-size:15px;font-weight:700;color:var(--ink);}
 .report-keyinfo .ki.tenant .ki-value{font-size:18px;color:var(--accent);}
 .report-subinfo{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:8px;}
-.sig-pending{border:1px dashed var(--accent);background:var(--accent-soft);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--accent);line-height:1.35;}
-.sig-defer-opt{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.3;}
-.sig-defer-opt input{margin-top:2px;flex-shrink:0;}
 .report-note{font-size:12px;color:var(--ink-soft);font-style:italic;margin-top:2px;}
 .report-actions{display:flex;gap:10px;margin:24px 0;flex-wrap:wrap;}
 .report-actions button{padding:12px 18px;border-radius:10px;border:none;font-weight:600;font-size:14px;cursor:pointer;}
@@ -247,6 +258,7 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
 </style>
 </head>
 <body>
+<input type="file" id="photoInput" accept="image/*" multiple style="display:none">
 
 <!-- ============ DASHBOARD ============ -->
 <div id="view-dashboard">
@@ -383,7 +395,6 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
         <div class="sig-actions"><span class="sig-name" id="name_sigEntreeLocataire"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigEntreeLocataire&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigEntreeLocataire&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigEntreeLocataire&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
         <div class="sig-date" id="date_sigEntreeLocataire"></div></div>
     </div>
-      <label class="sig-defer-opt"><input type="checkbox" id="deferEntree"><span data-fr-text="Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux à retourner signé au bailleur (le locataire dispose de 10 jours pour en demander la rectification).">Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux à retourner signé au bailleur (le locataire dispose de 10 jours pour en demander la rectification).</span></label>
     </div>
     <div id="sigGroupSortie"><h3 class="sig-moment" data-fr-text="État de sortie (check-out)">État de sortie (check-out)</h3>
     <div class="sig-grid">
@@ -394,7 +405,6 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
         <div class="sig-actions"><span class="sig-name" id="name_sigSortieLocataire"></span><span class="sig-btns"><button class="sig-btn-val" onclick="validateSig(&#39;sigSortieLocataire&#39;)" data-fr-text="Valider">Valider</button><button class="sig-btn-clr" onclick="clearSig(&#39;sigSortieLocataire&#39;)" data-fr-text="Effacer">Effacer</button><button class="sig-btn-unl hidden" onclick="unlockSig(&#39;sigSortieLocataire&#39;)" data-fr-text="Modifier">Modifier</button></span></div>
         <div class="sig-date" id="date_sigSortieLocataire"></div></div>
     </div>
-      <label class="sig-defer-opt"><input type="checkbox" id="deferSortie"><span data-fr-text="Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux de sortie à retourner signé au bailleur dans le délai légal.">Envoyer sans la signature du locataire — ajouter la mention légale : état des lieux de sortie à retourner signé au bailleur dans le délai légal.</span></label>
     </div>
     <div id="sigGroupCheckFinal" class="hidden"><h3 class="sig-moment" data-fr-text="Contrôle final (check final) — pré-état des lieux">Contrôle final (check final) — pré-état des lieux</h3>
     <div class="sig-grid">
@@ -1116,10 +1126,6 @@ function populateMetaFields(){
     };
   });
   document.getElementById('nonFrancophone').onchange = scheduleSave;
-  document.getElementById('deferEntree').checked = !!m.deferEntree;
-  document.getElementById('deferSortie').checked = !!m.deferSortie;
-  document.getElementById('deferEntree').onchange = scheduleSave;
-  document.getElementById('deferSortie').onchange = scheduleSave;
   document.getElementById('sendType').addEventListener('change', ()=>{ updateSigVisibility(); requestAnimationFrame(()=>sizeSignatures(true)); });
   restoreAllSigs(m);
   updateSigVisibility();
@@ -1575,6 +1581,9 @@ function render(){
         else if(row.kind==='keys') div.innerHTML = keyRowHTML(row);
         else if(row.kind==='meter') div.innerHTML = meterRowHTML(row);
         else div.innerHTML = etatRowHTML(row);
+        const pbar = document.createElement('div');
+        pbar.className='photo-bar'; pbar.dataset.rowId = row.id;
+        div.appendChild(pbar);
         const handle = document.createElement('span');
         handle.className='drag-handle'; handle.textContent='⋮⋮';
         handle.title = L('Glisser pour déplacer ce poste','Drag to move this item');
@@ -1586,7 +1595,7 @@ function render(){
     });
     body.appendChild(inner); room.appendChild(body); sectionsEl.appendChild(room);
   });
-  attachHandlers(); updateProgress();
+  attachHandlers(); updateProgress(); renderAllPhotoBars();
   const first = currentProp.template.find(s=>visibleRows(s).length>0);
   if(first){ const el=document.getElementById('room-'+first.id); if(el) el.classList.add('open'); }
 }
@@ -1866,6 +1875,197 @@ function sizeSigCanvas(canvasId, preserve){
     img.src=saved;
   }
 }
+/* ============ PHOTOS (IndexedDB : grande capacité, contrairement à localStorage) ============ */
+let photoDBPromise = null;
+const photoMem = {};
+function openPhotoDB(){
+  if(photoDBPromise) return photoDBPromise;
+  photoDBPromise = new Promise(function(resolve){
+    try{
+      if(!window.indexedDB){ resolve(null); return; }
+      const req = indexedDB.open('edl4-photos', 1);
+      req.onupgradeneeded = function(){ const db=req.result; if(!db.objectStoreNames.contains('photos')) db.createObjectStore('photos'); };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ resolve(null); };
+      req.onblocked = function(){ resolve(null); };
+    }catch(e){ resolve(null); }
+  });
+  return photoDBPromise;
+}
+async function photoPut(id, dataUrl){
+  const db = await openPhotoDB();
+  if(!db){ photoMem[id]=dataUrl; return false; }
+  return new Promise(function(res){
+    try{
+      const tx = db.transaction('photos','readwrite');
+      tx.objectStore('photos').put(dataUrl, id);
+      tx.oncomplete = function(){ res(true); };
+      tx.onerror = function(){ photoMem[id]=dataUrl; res(false); };
+    }catch(e){ photoMem[id]=dataUrl; res(false); }
+  });
+}
+async function photoGet(id){
+  if(photoMem[id]) return photoMem[id];
+  const db = await openPhotoDB();
+  if(!db) return null;
+  return new Promise(function(res){
+    try{
+      const tx = db.transaction('photos','readonly');
+      const r = tx.objectStore('photos').get(id);
+      r.onsuccess = function(){ res(r.result || null); };
+      r.onerror = function(){ res(null); };
+    }catch(e){ res(null); }
+  });
+}
+async function photoDel(id){
+  delete photoMem[id];
+  const db = await openPhotoDB();
+  if(!db) return;
+  try{ const tx = db.transaction('photos','readwrite'); tx.objectStore('photos').delete(id); }catch(e){}
+}
+/* Compression : l'iPad produit des photos de 3-5 Mo ; on redimensionne pour rester léger. */
+function compressImage(file, maxDim, quality){
+  return new Promise(function(resolve, reject){
+    const fr = new FileReader();
+    fr.onload = function(){
+      const img = new Image();
+      img.onload = function(){
+        let w = img.width, h = img.height;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        w = Math.max(1, Math.round(w*scale)); h = Math.max(1, Math.round(h*scale));
+        try{
+          const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+          const cx = cv.getContext('2d');
+          cx.fillStyle = '#fff'; cx.fillRect(0,0,w,h);
+          cx.drawImage(img, 0, 0, w, h);
+          resolve(cv.toDataURL('image/jpeg', quality));
+        }catch(e){ reject(e); }
+      };
+      img.onerror = function(){ reject(new Error('image illisible')); };
+      img.src = fr.result;
+    };
+    fr.onerror = function(){ reject(new Error('lecture impossible')); };
+    fr.readAsDataURL(file);
+  });
+}
+function newPhotoId(){ return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8); }
+let photoTargetRow = null;
+function triggerPhotoPicker(rowId){
+  photoTargetRow = rowId;
+  const inp = document.getElementById('photoInput');
+  if(!inp) return;
+  inp.value = '';
+  inp.click();
+}
+async function addPhotosToRow(rowId, files){
+  const store = currentStore();
+  store[rowId] = store[rowId] || {};
+  store[rowId].photos = store[rowId].photos || [];
+  let added = 0;
+  for(const file of files){
+    if(file.type && file.type.indexOf('image/')!==0) continue;
+    try{
+      const dataUrl = await compressImage(file, 1400, 0.6);
+      const pid = newPhotoId();
+      await photoPut(pid, dataUrl);
+      store[rowId].photos.push(pid);
+      added++;
+    }catch(e){ console.error('photo', e); }
+  }
+  if(added){ scheduleSave(); await renderPhotoBar(rowId); }
+  else alert(L('Aucune photo n\u2019a pu être ajoutée.','No photo could be added.'));
+}
+async function removePhoto(rowId, pid){
+  if(!confirm(L('Supprimer cette photo ?','Delete this photo?'))) return;
+  const store = currentStore();
+  if(store[rowId] && store[rowId].photos) store[rowId].photos = store[rowId].photos.filter(function(x){ return x!==pid; });
+  await photoDel(pid);
+  scheduleSave();
+  renderPhotoBar(rowId);
+}
+function openPhotoViewer(pid){
+  photoGet(pid).then(function(d){
+    if(!d) return;
+    const m = document.createElement('div');
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(20,35,50,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px;';
+    const im = document.createElement('img');
+    im.src = d; im.style.cssText = 'max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.4);';
+    m.appendChild(im);
+    m.onclick = function(){ m.remove(); };
+    document.body.appendChild(m);
+  });
+}
+async function renderPhotoBar(rowId){
+  const bar = document.querySelector('.photo-bar[data-row-id="'+rowId+'"]');
+  if(!bar) return;
+  const store = currentStore();
+  const ids = (store[rowId] && store[rowId].photos) || [];
+  bar.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'photo-add-btn';
+  btn.textContent = '📷 ' + (ids.length ? L('Ajouter','Add') : L('Photo','Photo'));
+  if(mode==='entree' && currentEdl.entryArchived) btn.disabled = true;
+  btn.onclick = function(e){ e.stopPropagation(); triggerPhotoPicker(rowId); };
+  bar.appendChild(btn);
+  ids.forEach(function(pid){
+    const wrap = document.createElement('span'); wrap.className='photo-thumb';
+    const img = document.createElement('img'); img.alt='';
+    img.onclick = function(){ openPhotoViewer(pid); };
+    wrap.appendChild(img);
+    const del = document.createElement('button');
+    del.type='button'; del.className='photo-del'; del.textContent='×';
+    del.title = L('Supprimer la photo','Delete photo');
+    del.onclick = function(e){ e.stopPropagation(); removePhoto(rowId, pid); };
+    wrap.appendChild(del);
+    bar.appendChild(wrap);
+    photoGet(pid).then(function(d){ if(d) img.src = d; });
+  });
+  // Rappel : photos prises à l'entrée, visibles en consultation lors de la sortie
+  if(mode==='sortie'){
+    const refIds = (currentEdl.entry[rowId] && currentEdl.entry[rowId].photos) || [];
+    if(refIds.length){
+      const lab = document.createElement('span'); lab.className='photo-count';
+      lab.textContent = L('· Réf. entrée :','· Move-in ref:');
+      bar.appendChild(lab);
+      refIds.forEach(function(pid){
+        const wrap = document.createElement('span'); wrap.className='photo-thumb'; wrap.style.opacity='.75';
+        const img = document.createElement('img'); img.alt='';
+        img.onclick = function(){ openPhotoViewer(pid); };
+        wrap.appendChild(img);
+        bar.appendChild(wrap);
+        photoGet(pid).then(function(d){ if(d) img.src = d; });
+      });
+    }
+  }
+}
+function renderAllPhotoBars(){
+  document.querySelectorAll('.photo-bar[data-row-id]').forEach(function(b){ renderPhotoBar(b.dataset.rowId); });
+}
+async function photoStripHTML(ids, label){
+  if(!ids || !ids.length) return '';
+  let imgs = '';
+  for(const pid of ids){
+    const d = await photoGet(pid);
+    if(d) imgs += '<img src="'+d+'" class="rep-photo">';
+  }
+  if(!imgs) return '';
+  return '<div class="rep-photo-group"><span class="rep-photo-label">'+label+'</span><div class="rep-photo-strip">'+imgs+'</div></div>';
+}
+async function photoLineHTML(rowId, lang){
+  const ep = (currentEdl.entry[rowId] && currentEdl.entry[rowId].photos) || [];
+  const sp = (currentEdl.sortie[rowId] && currentEdl.sortie[rowId].photos) || [];
+  if(!ep.length && !sp.length) return '';
+  const a = await photoStripHTML(ep, lang==='en'?'Move-in':'Entrée');
+  const b = await photoStripHTML(sp, lang==='en'?'Move-out':'Sortie');
+  return a + b;
+}
+function countPhotos(){
+  let n = 0;
+  [currentEdl.entry, currentEdl.sortie].forEach(function(store){
+    Object.keys(store||{}).forEach(function(k){ if(store[k] && store[k].photos) n += store[k].photos.length; });
+  });
+  return n;
+}
 const SIG_IDS = ['sigEntreeBailleur','sigEntreeLocataire','sigSortieBailleur','sigSortieLocataire','sigCheckFinalBailleur'];
 function sizeSignatures(preserve){
   SIG_IDS.forEach(function(id){ sizeSigCanvas(id, preserve!==false); });
@@ -1934,6 +2134,15 @@ function restoreSig(canvasId,dataUrl,signed,at){
   if(document.getElementById('block_'+canvasId)) updateSigUI(canvasId);
 }
 try{ SIG_IDS.forEach(setupSig); }catch(e){ console.error('sig setup', e); }
+try{
+  const _pi = document.getElementById('photoInput');
+  if(_pi) _pi.addEventListener('change', async function(e){
+    const files = Array.prototype.slice.call(e.target.files||[]);
+    const row = photoTargetRow;
+    e.target.value = '';
+    if(row && files.length) await addPhotosToRow(row, files);
+  });
+}catch(e){ console.error('photo input', e); }
 
 /* ---- Validation / verrouillage / datation des signatures ---- */
 function sigIsBlank(id){ const c=document.getElementById(id); return !(c && c.dataset.signed==="1"); }
@@ -2006,7 +2215,6 @@ async function saveNow(){
       tenantNameField: document.getElementById('tenantNameField').value, bailleurEmail: document.getElementById('bailleurEmail').value,
       tenantEmail: document.getElementById('tenantEmail').value, tenantNewAddress: document.getElementById('tenantNewAddress').value,
       checkFinalDate: document.getElementById('checkFinalDate').value, sendType: document.getElementById('sendType').value,
-      deferEntree: document.getElementById('deferEntree').checked, deferSortie: document.getElementById('deferSortie').checked,
       nonFrancophone: document.getElementById('nonFrancophone').checked, observations: document.getElementById('observations').value,
       sigs: collectSigs(),
     });
@@ -2245,6 +2453,8 @@ async function openReport(){
       for(const row of gRows){
         const r = computeRowStrings(sec,row,lang);
         html += `<div class="report-line ${r.isDiff?'diff':''}"><span class="lbl">${await tAsync(row.label,lang)}</span><span class="c-in">${r.entryHtml}</span><span class="c-out">${r.sortieHtml}</span></div>`;
+        const ph = await photoLineHTML(row.id, lang);
+        if(ph) html += ph;
       }
     }
   }
@@ -2267,53 +2477,40 @@ async function openReport(){
     const p=n=>String(n).padStart(2,'0');
     return (lang==='en'?'signed on ':'signé le ')+p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+(lang==='en'?' at ':' à ')+p(d.getHours())+'h'+p(d.getMinutes());
   }
-  function sigCell(info, role, name, pendingMention){
-    let body;
-    if(info.signed){
-      body = `<img src="${info.img}" style="height:70px;border:1px solid var(--line);border-radius:6px;background:#fff;display:block;max-width:100%;">
-           <div style="font-size:11px;color:var(--good);font-weight:600;margin-top:3px;">${t('signé',lang)} ✓ · ${sigStamp(info.at)}</div>`;
-    } else if(pendingMention){
-      body = `<div class="sig-pending">${pendingMention}</div>`;
-    } else {
-      body = `<div style="height:70px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;">${t('non signé',lang)}</div>`;
-    }
+  function sigCell(info, role, name){
+    const body = info.signed
+      ? `<img src="${info.img}" style="height:70px;border:1px solid var(--line);border-radius:6px;background:#fff;display:block;max-width:100%;">
+           <div style="font-size:11px;color:var(--good);font-weight:600;margin-top:3px;">${t('signé',lang)} ✓ · ${sigStamp(info.at)}</div>`
+      : `<div style="height:70px;border:1px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;">${t('non signé',lang)}</div>`;
     return `<div style="flex:1;min-width:180px;">
       <div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">${role}${name?' — '+escapeHtml(name):''}</div>
       ${body}
     </div>`;
   }
-  function sigPair(momentLabel, bId, lId, tenantPending){
+  function sigPair(momentLabel, bId, lId){
     return `<div style="margin-top:12px;break-inside:avoid;">
       <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">${momentLabel}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo(bId), t('Bailleur',lang), agent, null)}${sigCell(sigInfo(lId), t('Locataire',lang), tenant, tenantPending)}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo(bId), t('Bailleur',lang), agent)}${sigCell(sigInfo(lId), t('Locataire',lang), tenant)}</div>
     </div>`;
   }
   html += `<h3>${t('Signatures',lang)}</h3>`;
-  const deferE = !!(document.getElementById('deferEntree') && document.getElementById('deferEntree').checked);
-  const deferS = !!(document.getElementById('deferSortie') && document.getElementById('deferSortie').checked);
-  const mentionEntree = lang==='en'
-    ? "Tenant's signature pending — this move-in inventory is handed to the tenant and must be returned signed to the landlord. The tenant has 10 days to request corrections (Art. 3, Law No. 89-462 of 6 July 1989)."
-    : "Signature du locataire en attente — le présent état des lieux d'entrée est remis au locataire et doit être retourné signé au bailleur. Le locataire dispose d'un délai de 10 jours pour en demander la rectification (art. 3, loi n°89-462 du 6 juillet 1989).";
-  const mentionSortie = lang==='en'
-    ? "Tenant's signature pending — this move-out inventory must be returned signed to the landlord within the legal time frame."
-    : "Signature du locataire en attente — le présent état des lieux de sortie est à retourner signé au bailleur dans le délai légal.";
-  html += sigPair(lang==='en'?'Check-in':"État d'entrée", 'sigEntreeBailleur','sigEntreeLocataire', (!sigInfo('sigEntreeLocataire').signed && deferE)?mentionEntree:null);
-  html += sigPair(lang==='en'?'Check-out':"État de sortie", 'sigSortieBailleur','sigSortieLocataire', (!sigInfo('sigSortieLocataire').signed && deferS)?mentionSortie:null);
+  html += sigPair(lang==='en'?'Check-in':"État d'entrée", 'sigEntreeBailleur','sigEntreeLocataire');
+  html += sigPair(lang==='en'?'Check-out':"État de sortie", 'sigSortieBailleur','sigSortieLocataire');
   if(sendType==='pre'){
     const cfLabel = (lang==='en'?'Final check (final walk-through)':'Contrôle final (check final)') + (checkFinal?` — ${checkFinal}`:'');
     html += `<div style="margin-top:12px;break-inside:avoid;">
       <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">${cfLabel}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo('sigCheckFinalBailleur'), t('Bailleur',lang), agent, null)}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">${sigCell(sigInfo('sigCheckFinalBailleur'), t('Bailleur',lang), agent)}</div>
     </div>`;
   }
   html += `
     <div class="report-actions">
       <button class="btn-primary" onclick="window.print()">${lang==='en'?'Print / Save as PDF':'Imprimer / Enregistrer en PDF'}</button>
-      <button class="btn-secondary" onclick="sendEmail('${lang}','${sendType}','${dateSortie}',${diffs.length})">${lang==='en'?'Send by email to the tenant':'Envoyer par email au locataire'}</button>
+      <button class="btn-secondary" onclick="sendEmail('${lang}','${sendType}','${dateSortie}',${diffs.length})">${lang==='en'?'Prepare the email':'Préparer l\u2019email'}</button>
     </div>
     <div class="email-note">${lang==='en'
-      ? "Sending by email opens your Mail app with a pre-filled message and your address in Cc. As this tool runs in the browser, it cannot attach a PDF automatically or collect a remote e-signature — use \"Print / Save as PDF\" first, then attach it manually before sending."
-      : "L'envoi par email ouvre votre application Mail avec un message pré-rempli et votre adresse en copie. Comme cette application fonctionne dans le navigateur, elle ne peut pas joindre automatiquement un PDF ni recueillir une signature électronique à distance — faites d'abord \"Imprimer / Enregistrer en PDF\", puis joignez-le manuellement avant l'envoi."}</div>`;
+      ? "<b>How to send:</b> 1) Tap \"Print / Save as PDF\", then use the Share button to save the PDF to Files. 2) Tap \"Prepare the email\": your Mail app opens with the tenant as recipient and the landlord in Cc, subject and message pre-filled. 3) Attach the PDF you just saved, then send.<br>Photos are included in the PDF. A browser app cannot attach a file automatically, which is why this last step is manual."
+      : "<b>Pour envoyer :</b> 1) Appuyez sur « Imprimer / Enregistrer en PDF », puis utilisez le bouton Partager pour enregistrer le PDF dans Fichiers. 2) Appuyez sur « Préparer l\u2019email » : votre application Mail s\u2019ouvre avec le locataire en destinataire et le bailleur en copie, objet et message pré-remplis. 3) Joignez le PDF que vous venez d\u2019enregistrer, puis envoyez.<br>Les photos sont incluses dans le PDF. Une application qui fonctionne dans le navigateur ne peut pas joindre un fichier automatiquement : c\u2019est pourquoi cette dernière étape reste manuelle."}</div>`;
   body.innerHTML = html;
 }
 function closeReport(){ document.getElementById('overlay').classList.remove('show'); }
@@ -2397,6 +2594,20 @@ async function exportAllData(){
       const r = await storageGet('edl4-edl-'+e.id);
       if(r && r.value) dump.edls.push(JSON.parse(r.value));
     }
+    // Photos : sauvegardées avec les données (sinon elles seraient perdues en cas de restauration)
+    dump.photos = {};
+    for(const edl of dump.edls){
+      for(const store of [edl.entry, edl.sortie]){
+        for(const k of Object.keys(store||{})){
+          const ids = (store[k] && store[k].photos) || [];
+          for(const pid of ids){
+            if(dump.photos[pid]) continue;
+            const d = await photoGet(pid);
+            if(d) dump.photos[pid] = d;
+          }
+        }
+      }
+    }
     const text = JSON.stringify(dump);
     let downloaded = false;
     try{
@@ -2409,7 +2620,8 @@ async function exportAllData(){
       setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
       downloaded = true;
     }catch(e){ console.error('download failed', e); }
-    showDataModal('export', text, downloaded);
+    const tooBig = text.length > 2000000;
+    showDataModal('export', tooBig ? L('Sauvegarde volumineuse (photos incluses) : utilisez le fichier téléchargé — le texte n\u2019est pas affiché ici pour éviter de bloquer l\u2019iPad.','Large backup (photos included): use the downloaded file — the text is not shown here to avoid freezing the iPad.') : text, downloaded);
   }catch(err){ console.error(err); alert("Erreur lors de l'export : "+err.message); }
 }
 
@@ -2475,6 +2687,11 @@ async function importDump(dump){
   }
   if(!confirm(L(`Importer ${dump.props.length} logement(s) et ${dump.edls.length} état(s) des lieux ?\n\nLes éléments portant le même identifiant seront remplacés par la version importée (les autres données existantes sont conservées).`,
                `Import ${dump.props.length} propert(ies) and ${dump.edls.length} inspection(s)?\n\nItems with the same identifier will be replaced by the imported version (other existing data is kept).`))) return;
+  if(dump.photos && typeof dump.photos==='object'){
+    for(const pid of Object.keys(dump.photos)){
+      try{ await photoPut(pid, dump.photos[pid]); }catch(e){ console.error('photo import', e); }
+    }
+  }
   for(const prop of dump.props){
     if(!prop.id) continue;
     if(prop.template) prop.template = migrateTemplate(prop.template);
