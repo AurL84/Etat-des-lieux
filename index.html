@@ -2079,7 +2079,7 @@ function countPhotos(){
   });
   return n;
 }
-const APP_VERSION = 'v3 — aplats bgcolor';
+const APP_VERSION = 'v4 — aplats en images';
 const SIG_IDS = ['sigEntreeBailleur','sigEntreeLocataire','sigSortieBailleur','sigSortieLocataire','sigCheckFinalBailleur'];
 function sizeSignatures(preserve){
   SIG_IDS.forEach(function(id){ sizeSigCanvas(id, preserve!==false); });
@@ -2533,6 +2533,115 @@ async function openReport(){
    Le convertisseur HTML→PDF de Google ne gère pas les mises en page CSS
    modernes (grid/flex) : on reconstruit donc ici une version en tableaux,
    avec styles en ligne, qui se convertit fidèlement. */
+/* ============================================================
+   APLATS EN IMAGES
+   Le convertisseur PDF de Google ignore les fonds (CSS background
+   ET attribut bgcolor) — vérifié en conditions réelles. En revanche
+   il affiche parfaitement les images. On dessine donc les bandeaux
+   et encadrés colorés sur un canvas, et on les insère en images.
+   ============================================================ */
+const PDF_W = 650;          // largeur utile de la page convertie, en px
+const PDF_FONT = '"DM Sans", Helvetica, Arial, sans-serif';
+
+function roundRectPath(cx, x, y, w, h, r){
+  cx.beginPath();
+  cx.moveTo(x+r, y);
+  cx.lineTo(x+w-r, y); cx.quadraticCurveTo(x+w, y, x+w, y+r);
+  cx.lineTo(x+w, y+h-r); cx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  cx.lineTo(x+r, y+h); cx.quadraticCurveTo(x, y+h, x, y+h-r);
+  cx.lineTo(x, y+r); cx.quadraticCurveTo(x, y, x+r, y);
+  cx.closePath();
+}
+
+/* Bandeau plein (pièce, Observations, Écarts, Signatures) */
+function imgBand(label, bg){
+  try{
+    const S = 2, w = PDF_W*S, h = 42*S;
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    const cx = cv.getContext('2d');
+    roundRectPath(cx, 0, 0, w, h, 9*S);
+    cx.fillStyle = bg; cx.fill();
+    cx.fillStyle = '#FFFFFF';
+    cx.font = 'bold ' + (13*S) + 'px ' + PDF_FONT;
+    cx.textBaseline = 'middle';
+    let txt = String(label).toUpperCase();
+    // espacement des lettres, comme à l'impression
+    let x = 14*S;
+    for(const ch of txt){ cx.fillText(ch, x, h/2 + S); x += cx.measureText(ch).width + 0.9*S; }
+    return '<img src="'+cv.toDataURL('image/png')+'" width="'+PDF_W+'" style="display:block;margin:16px 0 3px;">';
+  }catch(e){
+    return '<div style="color:'+bg+';font-weight:bold;font-size:11pt;border-bottom:2px solid '+bg+';padding:6px 0;margin:16px 0 3px;">'+String(label).toUpperCase()+'</div>';
+  }
+}
+
+/* Encadré locataire / bailleur / dates */
+function imgKeyInfo(pairs, C){
+  try{
+    const S = 2, w = PDF_W*S, h = 96*S;
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    const cx = cv.getContext('2d');
+    roundRectPath(cx, S, S, w-2*S, h-2*S, 12*S);
+    cx.fillStyle = C.accentSoft; cx.fill();
+    cx.lineWidth = 1.4*S; cx.strokeStyle = C.accent; cx.stroke();
+    const colX = [18*S, (PDF_W/2 + 8)*S];
+    const rowY = [16*S, 56*S];
+    pairs.forEach(function(p, i){
+      const x = colX[i%2], y = rowY[Math.floor(i/2)];
+      cx.textBaseline = 'top';
+      cx.fillStyle = C.inkSoft;
+      cx.font = (7.5*S) + 'px ' + PDF_FONT;
+      let lx = x;
+      for(const ch of p.label.toUpperCase()){ cx.fillText(ch, lx, y); lx += cx.measureText(ch).width + 0.5*S; }
+      cx.fillStyle = p.big ? C.accent : C.ink;
+      cx.font = 'bold ' + ((p.big?15:12)*S) + 'px ' + PDF_FONT;
+      cx.fillText(p.value || '—', x, y + 12*S);
+    });
+    return '<img src="'+cv.toDataURL('image/png')+'" width="'+PDF_W+'" style="display:block;margin:0 0 8px;">';
+  }catch(e){ return ''; }
+}
+
+/* Encadré légal (texte replié automatiquement) */
+function imgLegal(text, C){
+  try{
+    const S = 2, w = PDF_W*S, pad = 13*S, maxW = w - 2*pad;
+    const probe = document.createElement('canvas').getContext('2d');
+    probe.font = (8.5*S) + 'px ' + PDF_FONT;
+    const words = String(text).split(/\s+/);
+    const lines = []; let line = '';
+    for(const word of words){
+      const test = line ? line + ' ' + word : word;
+      if(probe.measureText(test).width > maxW && line){ lines.push(line); line = word; }
+      else line = test;
+    }
+    if(line) lines.push(line);
+    const lh = 12.5*S, h = pad*2 + lines.length*lh;
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    const cx = cv.getContext('2d');
+    roundRectPath(cx, S, S, w-2*S, h-2*S, 12*S);
+    cx.fillStyle = C.accentSoft; cx.fill();
+    cx.lineWidth = 1.4*S; cx.strokeStyle = C.accent; cx.stroke();
+    cx.fillStyle = C.ink; cx.font = (8.5*S) + 'px ' + PDF_FONT; cx.textBaseline = 'top';
+    lines.forEach(function(l, i){ cx.fillText(l, pad, pad + i*lh); });
+    return '<img src="'+cv.toDataURL('image/png')+'" width="'+PDF_W+'" style="display:block;margin:0 0 6px;">';
+  }catch(e){ return ''; }
+}
+
+/* Bandeau d'avertissement (pré-rapport) */
+function imgWarnBanner(text, C){
+  try{
+    const S = 2, w = PDF_W*S, h = 34*S;
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    const cx = cv.getContext('2d');
+    roundRectPath(cx, S, S, w-2*S, h-2*S, 8*S);
+    cx.fillStyle = C.warnBg; cx.fill();
+    cx.lineWidth = 1.4*S; cx.strokeStyle = C.warn; cx.stroke();
+    cx.fillStyle = C.warn; cx.font = 'bold ' + (9*S) + 'px ' + PDF_FONT;
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(text, w/2, h/2);
+    return '<img src="'+cv.toDataURL('image/png')+'" width="'+PDF_W+'" style="display:block;margin:0 0 12px;">';
+  }catch(e){ return ''; }
+}
+
 async function buildEmailHtml(lang, sendType){
   const tenant = document.getElementById('tenantNameField').value || currentEdl.tenantName || '';
   const agent = document.getElementById('agentName').value || currentProp.mandataire || '';
@@ -2554,22 +2663,20 @@ async function buildEmailHtml(lang, sendType){
   const TH = 'border:0;border-bottom:2px solid '+C.accent+';padding:7px 8px 5px 0;text-align:left;'
            + 'font-size:7.5pt;letter-spacing:.05em;color:'+C.accent+';text-transform:uppercase;font-weight:bold;';
   const TDin  = TD + 'color:'+C.inkSoft+';';
-  const TDdiffL = TD + 'background:'+C.warnBg+';border-radius:6px 0 0 6px;';
-  const TDdiffIn = TD + 'background:'+C.warnBg+';color:'+C.inkSoft+';';
-  const TDdiff = TD + 'background:'+C.warnBg+';color:'+C.warn+';font-weight:bold;border-radius:0 6px 6px 0;';
+  /* Écarts : le fond coloré étant impossible, on cerne la ligne en rouge. */
+  const DBASE = 'border-top:1.5px solid '+C.warn+';border-bottom:1.5px solid '+C.warn+';padding:6px 8px 6px 6px;vertical-align:top;font-size:9.5pt;';
+  const TDdiffL = DBASE + 'border-left:3px solid '+C.warn+';background:'+C.warnBg+';font-weight:bold;';
+  const TDdiffIn = DBASE + 'background:'+C.warnBg+';color:'+C.inkSoft+';';
+  const TDdiff = DBASE + 'border-right:1.5px solid '+C.warn+';background:'+C.warnBg+';color:'+C.warn+';font-weight:bold;';
   const TBL = 'border-collapse:collapse;width:100%;margin:0 0 10px;';
 
   let h = '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
         + '<body style="font-family:Helvetica,Arial,sans-serif;color:'+C.ink+';font-size:10pt;">';
 
   if(sendType==='pre'){
-    h += '<table style="border-collapse:separate;width:100%;margin:0 0 12px;"><tr>'
-       + '<td bgcolor="'+C.warnBg+'" style="border:1px solid '+C.warn+';border-radius:8px;color:'+C.warn+';'
-       + 'padding:8px 10px;font-size:9pt;font-weight:bold;text-align:center;">'
-       + (lang==='en'
-          ? 'PRELIMINARY REPORT — subject to confirmation after the final walk-through on '+(checkFinal||'—')
-          : 'PRÉ-RAPPORT — sous réserve de confirmation après le contrôle final du '+(checkFinal||'—'))
-       + '</td></tr></table>';
+    h += imgWarnBanner(lang==='en'
+        ? 'PRELIMINARY REPORT — subject to confirmation after the final walk-through on '+(checkFinal||'—')
+        : 'PRÉ-RAPPORT — sous réserve de confirmation après le contrôle final du '+(checkFinal||'—'), C);
   }
 
   /* --- En-tête : titre, adresse, encadré locataire/bailleur/dates --- */
@@ -2578,19 +2685,12 @@ async function buildEmailHtml(lang, sendType){
   h += '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:13pt;text-align:center;margin:0 0 12px;">'
      + escapeHtml(currentProp.address||'') + '</div>';
 
-  const kiLab = 'font-size:7.5pt;letter-spacing:.05em;color:'+C.inkSoft+';text-transform:uppercase;';
-  const kiCell = 'border:0;padding:6px 12px;width:50%;vertical-align:top;';
-  h += '<table style="border-collapse:separate;width:100%;margin:0 0 8px;"><tr><td bgcolor="'+C.accentSoft+'" style="border:1px solid '+C.accent+';border-radius:12px;padding:10px 8px;">'
-     + '<table style="border-collapse:collapse;width:100%;">'
-     + '<tr><td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Tenant':'Locataire')+'</div>'
-     + '<div style="font-size:15pt;font-weight:bold;color:'+C.accent+';">'+(escapeHtml(tenant)||'—')+'</div></td>'
-     + '<td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Landlord / agent':'Bailleur / mandataire')+'</div>'
-     + '<div style="font-size:11.5pt;font-weight:bold;">'+(escapeHtml(agent)||'—')+'</div></td></tr>'
-     + '<tr><td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Move-in date':"Date d'entrée")+'</div>'
-     + '<div style="font-size:11.5pt;font-weight:bold;">'+(dateEntree||'—')+'</div></td>'
-     + '<td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Move-out date':'Date de sortie')+'</div>'
-     + '<div style="font-size:11.5pt;font-weight:bold;">'+(dateSortie||'—')+'</div></td></tr></table>'
-     + '</td></tr></table>';
+  h += imgKeyInfo([
+    {label:(lang==='en'?'Tenant':'Locataire'), value:tenant, big:true},
+    {label:(lang==='en'?'Landlord / agent':'Bailleur / mandataire'), value:agent},
+    {label:(lang==='en'?'Move-in date':"Date d'entrée"), value:dateEntree},
+    {label:(lang==='en'?'Move-out date':'Date de sortie'), value:dateSortie}
+  ], C);
 
   h += '<div style="text-align:center;font-size:8.5pt;color:'+C.inkSoft+';margin:0 0 10px;">'
      + (lang==='en'?'Drawn up in ':'Fait à ')+escapeHtml(lieu)
@@ -2603,21 +2703,14 @@ async function buildEmailHtml(lang, sendType){
         ? 'Reading key: for each item, the <b>Move-in</b> column shows the condition recorded at check-in and the <b>Move-out</b> column the condition at check-out (Qty = quantity).'
         : 'Clé de lecture : pour chaque poste, la colonne <b>Entrée</b> indique l\u2019état constaté à l\u2019entrée et la colonne <b>Sortie</b> celui constaté à la sortie (Qté = quantité).')
      + '</div>';
-  h += '<table style="border-collapse:separate;width:100%;margin:0 0 4px;"><tr>'
-     + '<td bgcolor="'+C.accentSoft+'" style="border:1px solid '+C.accent+';border-radius:12px;padding:11px 13px;font-size:8.5pt;line-height:1.45;">'
-     + (lang==='en' ? LEGAL_EN
-        : "L'état des lieux doit être établi de façon contradictoire entre les deux parties lors de la remise des clés au locataire et lors de leur restitution en fin de bail, conformément à l'article 3 de la loi n°89-462 du 6 juillet 1989. Il fait partie du contrat de location, dont il ne peut être dissocié. L'état des lieux d'entrée peut être complété par le locataire dans les 10 jours suivant sa tenue (et pendant le 1er mois de chauffe pour les éléments de chauffage).")
-     + '</td></tr></table>';
+  h += imgLegal(lang==='en' ? LEGAL_EN
+      : "L'état des lieux doit être établi de façon contradictoire entre les deux parties lors de la remise des clés au locataire et lors de leur restitution en fin de bail, conformément à l'article 3 de la loi n°89-462 du 6 juillet 1989. Il fait partie du contrat de location, dont il ne peut être dissocié. L'état des lieux d'entrée peut être complété par le locataire dans les 10 jours suivant sa tenue (et pendant le 1er mois de chauffe pour les éléments de chauffage).", C);
 
   /* --- Sections --- */
   const GROUPS_EN = {'État de la pièce':'Room condition','Mobilier':'Furniture','Meubles':'Furniture','Électroménager':'Appliances','Équipement':'Equipment'};
   const diffs = [];
   /* Le convertisseur Google ignore CSS background : on passe par l'attribut bgcolor. */
-  const band = function(label, bg){
-    return '<table style="border-collapse:separate;width:100%;margin:16px 0 3px;"><tr>'
-         + '<td bgcolor="'+bg+'" style="border-radius:9px;padding:8px 12px;color:#FFFFFF;font-size:11pt;'
-         + 'font-weight:bold;letter-spacing:.04em;">'+String(label).toUpperCase()+'</td></tr></table>';
-  };
+  const band = function(label, bg){ return imgBand(label, bg); };
   const colHead = function(){
     return '<tr><th style="'+TH+'width:44%;">'+(lang==='en'?'Item':'Poste')+'</th>'
          + '<th style="'+TH+'width:28%;">'+(lang==='en'?'Move-in':'Entrée')+'</th>'
