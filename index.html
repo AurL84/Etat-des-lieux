@@ -2561,12 +2561,13 @@ async function buildEmailHtml(lang, sendType){
         + '<body style="font-family:Helvetica,Arial,sans-serif;color:'+C.ink+';font-size:10pt;">';
 
   if(sendType==='pre'){
-    h += '<div style="background:'+C.warnBg+';border:1px solid '+C.warn+';border-radius:8px;color:'+C.warn+';padding:8px 10px;'
-       + 'font-size:9pt;font-weight:bold;text-align:center;margin-bottom:12px;">'
+    h += '<table style="border-collapse:separate;width:100%;margin:0 0 12px;"><tr>'
+       + '<td bgcolor="'+C.warnBg+'" style="border:1px solid '+C.warn+';border-radius:8px;color:'+C.warn+';'
+       + 'padding:8px 10px;font-size:9pt;font-weight:bold;text-align:center;">'
        + (lang==='en'
           ? 'PRELIMINARY REPORT — subject to confirmation after the final walk-through on '+(checkFinal||'—')
           : 'PRÉ-RAPPORT — sous réserve de confirmation après le contrôle final du '+(checkFinal||'—'))
-       + '</div>';
+       + '</td></tr></table>';
   }
 
   /* --- En-tête : titre, adresse, encadré locataire/bailleur/dates --- */
@@ -2577,7 +2578,7 @@ async function buildEmailHtml(lang, sendType){
 
   const kiLab = 'font-size:7.5pt;letter-spacing:.05em;color:'+C.inkSoft+';text-transform:uppercase;';
   const kiCell = 'border:0;padding:6px 12px;width:50%;vertical-align:top;';
-  h += '<table style="border-collapse:separate;width:100%;margin:0 0 8px;border:1px solid '+C.accent+';border-radius:12px;background:'+C.accentSoft+';"><tr><td style="padding:8px 6px;border:0;">'
+  h += '<table style="border-collapse:separate;width:100%;margin:0 0 8px;"><tr><td bgcolor="'+C.accentSoft+'" style="border:1px solid '+C.accent+';border-radius:12px;padding:10px 8px;">'
      + '<table style="border-collapse:collapse;width:100%;">'
      + '<tr><td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Tenant':'Locataire')+'</div>'
      + '<div style="font-size:15pt;font-weight:bold;color:'+C.accent+';">'+(escapeHtml(tenant)||'—')+'</div></td>'
@@ -2600,14 +2601,21 @@ async function buildEmailHtml(lang, sendType){
         ? 'Reading key: for each item, the <b>Move-in</b> column shows the condition recorded at check-in and the <b>Move-out</b> column the condition at check-out (Qty = quantity).'
         : 'Clé de lecture : pour chaque poste, la colonne <b>Entrée</b> indique l\u2019état constaté à l\u2019entrée et la colonne <b>Sortie</b> celui constaté à la sortie (Qté = quantité).')
      + '</div>';
-  h += '<div style="background:'+C.accentSoft+';border:1px solid '+C.accent+';border-radius:12px;padding:10px 12px;font-size:8.5pt;line-height:1.45;margin:0 0 4px;">'
+  h += '<table style="border-collapse:separate;width:100%;margin:0 0 4px;"><tr>'
+     + '<td bgcolor="'+C.accentSoft+'" style="border:1px solid '+C.accent+';border-radius:12px;padding:11px 13px;font-size:8.5pt;line-height:1.45;">'
      + (lang==='en' ? LEGAL_EN
         : "L'état des lieux doit être établi de façon contradictoire entre les deux parties lors de la remise des clés au locataire et lors de leur restitution en fin de bail, conformément à l'article 3 de la loi n°89-462 du 6 juillet 1989. Il fait partie du contrat de location, dont il ne peut être dissocié. L'état des lieux d'entrée peut être complété par le locataire dans les 10 jours suivant sa tenue (et pendant le 1er mois de chauffe pour les éléments de chauffage).")
-     + '</div>';
+     + '</td></tr></table>';
 
   /* --- Sections --- */
   const GROUPS_EN = {'État de la pièce':'Room condition','Mobilier':'Furniture','Meubles':'Furniture','Électroménager':'Appliances','Équipement':'Equipment'};
   const diffs = [];
+  /* Le convertisseur Google ignore CSS background : on passe par l'attribut bgcolor. */
+  const band = function(label, bg){
+    return '<table style="border-collapse:separate;width:100%;margin:16px 0 3px;"><tr>'
+         + '<td bgcolor="'+bg+'" style="border-radius:9px;padding:8px 12px;color:#FFFFFF;font-size:11pt;'
+         + 'font-weight:bold;letter-spacing:.04em;">'+String(label).toUpperCase()+'</td></tr></table>';
+  };
   const colHead = function(){
     return '<tr><th style="'+TH+'width:44%;">'+(lang==='en'?'Item':'Poste')+'</th>'
          + '<th style="'+TH+'width:28%;">'+(lang==='en'?'Move-in':'Entrée')+'</th>'
@@ -2618,8 +2626,7 @@ async function buildEmailHtml(lang, sendType){
     secIdx++;
     const vRows = visibleRows(sec); if(vRows.length===0) continue;
     const pal = roomPal(secIdx);
-    h += '<div style="background:'+pal.m+';color:#FFFFFF;border-radius:9px;padding:8px 12px;font-size:11pt;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;margin:16px 0 2px;">'
-       + (await tAsync(sec.title,lang)) + '</div>';
+    h += band(await tAsync(sec.title,lang), pal.m);
     h += '<table style="'+TBL+'">' + colHead();
     for(const grp of sec.groups){
       const gRows = visibleGroupRows(grp); if(gRows.length===0) continue;
@@ -2629,9 +2636,10 @@ async function buildEmailHtml(lang, sendType){
       }
       for(const row of gRows){
         const r = computeRowStrings(sec,row,lang);
-        h += '<tr><td style="'+(r.isDiff?TDdiffL:TD)+'">'+(await tAsync(row.label,lang))+'</td>'
-           + '<td style="'+(r.isDiff?TDdiffIn:TDin)+'">'+r.entryHtml+'</td>'
-           + '<td style="'+(r.isDiff?TDdiff:TDin)+'">'+r.sortieHtml+'</td></tr>';
+        const bg = r.isDiff ? ' bgcolor="'+C.warnBg+'"' : '';
+        h += '<tr><td'+bg+' style="'+(r.isDiff?TDdiffL:TD)+'">'+(await tAsync(row.label,lang))+'</td>'
+           + '<td'+bg+' style="'+(r.isDiff?TDdiffIn:TDin)+'">'+r.entryHtml+'</td>'
+           + '<td'+bg+' style="'+(r.isDiff?TDdiff:TDin)+'">'+r.sortieHtml+'</td></tr>';
         if(r.isDiff || r.note) diffs.push({room: await tAsync(sec.title,lang), label: await tAsync(row.label,lang), e:r.entryHtml, s:r.sortieHtml, note:r.note});
         const ep = (currentEdl.entry[row.id] && currentEdl.entry[row.id].photos) || [];
         const sp = (currentEdl.sortie[row.id] && currentEdl.sortie[row.id].photos) || [];
@@ -2658,20 +2666,19 @@ async function buildEmailHtml(lang, sendType){
   }
 
   /* --- Observations --- */
-  h += '<div style="background:'+C.accent+';color:#FFFFFF;border-radius:9px;padding:8px 12px;font-size:11pt;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;margin:16px 0 8px;">'
-     + t('Observations générales',lang) + '</div>';
+  h += band(t('Observations générales',lang), C.accent);
   h += '<div style="font-size:9.5pt;">'+(obs ? escapeHtml(obs).replace(/\n/g,'<br>') : t('Aucune observation particulière.',lang))+'</div>';
 
   /* --- Récapitulatif des écarts --- */
-  h += '<div style="background:'+C.accent+';color:#FFFFFF;padding:6px 10px;font-size:11pt;font-weight:bold;margin:14px 0 6px;">'
-     + t('Récapitulatif des écarts',lang) + ' (' + diffs.length + ')</div>';
+  h += band(t('Récapitulatif des écarts',lang)+' ('+diffs.length+')', C.accent);
   if(!diffs.length){
     h += '<div style="font-size:9.5pt;color:'+C.good+';">'+t("Aucun écart constaté par rapport à l'état des lieux d'entrée.",lang)+'</div>';
   } else {
     h += '<table style="'+TBL+'">' + colHead();
     diffs.forEach(function(d){
-      h += '<tr><td style="'+TDdiffL+'">'+d.room+' — '+d.label+'</td>'
-         + '<td style="'+TDdiffIn+'">'+d.e+'</td><td style="'+TDdiff+'">'+d.s+'</td></tr>';
+      h += '<tr><td bgcolor="'+C.warnBg+'" style="'+TDdiffL+'">'+d.room+' — '+d.label+'</td>'
+         + '<td bgcolor="'+C.warnBg+'" style="'+TDdiffIn+'">'+d.e+'</td>'
+         + '<td bgcolor="'+C.warnBg+'" style="'+TDdiff+'">'+d.s+'</td></tr>';
       if(d.note) h += '<tr><td colspan="3" style="border:0;padding:3px 0 8px;font-style:italic;color:'+C.inkSoft+';font-size:8.5pt;">'+escapeHtml(d.note)+'</td></tr>';
     });
     h += '</table>';
@@ -2705,8 +2712,7 @@ async function buildEmailHtml(lang, sendType){
          + '</tr></table>';
     return out;
   }
-  h += '<div style="background:'+C.accent+';color:#FFFFFF;border-radius:9px;padding:8px 12px;font-size:11pt;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;margin:16px 0 4px;">'
-     + t('Signatures',lang) + '</div>';
+  h += band(t('Signatures',lang), C.accent);
   h += sigRow(lang==='en'?'Check-in':"État d'entrée", 'sigEntreeBailleur','sigEntreeLocataire');
   h += sigRow(lang==='en'?'Check-out':'État de sortie', 'sigSortieBailleur','sigSortieLocataire');
   if(sendType==='pre'){
