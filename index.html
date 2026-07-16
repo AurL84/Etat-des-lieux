@@ -2536,99 +2536,181 @@ async function buildEmailHtml(lang, sendType){
   const dateSortie = fmtDate(document.getElementById('dateSortie').value);
   const lieu = document.getElementById('lieuSortie').value || 'Paris';
   const checkFinal = fmtDate(document.getElementById('checkFinalDate').value);
+  const tenantNewAddress = document.getElementById('tenantNewAddress').value || '';
   const obs = (document.getElementById('observations').value || '').trim();
 
-  const S = {
-    page: 'font-family:Arial,Helvetica,sans-serif;color:#1C2733;',
-    h1: 'text-align:center;color:#1F5C8B;font-size:20pt;margin:0 0 2px;',
-    addr: 'text-align:center;font-size:12pt;margin:0 0 12px;',
-    tbl: 'border-collapse:collapse;width:100%;font-size:9.5pt;margin-bottom:10px;',
-    th: 'background:#E8F0F7;border:1px solid #B9CDDE;padding:5px 6px;text-align:left;font-size:8.5pt;text-transform:uppercase;color:#1F5C8B;',
-    td: 'border:1px solid #D7E0E9;padding:5px 6px;vertical-align:top;',
-    h2: 'background:#1F5C8B;color:#FFFFFF;padding:6px 9px;font-size:11.5pt;margin:14px 0 0;',
-    diff: 'border:1px solid #D7E0E9;padding:5px 6px;vertical-align:top;background:#FDF3E3;font-weight:bold;color:#B4690E;'
-  };
+  /* Palette identique à l'écran / à l'impression.
+     Le convertisseur PDF de Google ignore les dégradés et les polices web :
+     on utilise donc des aplats de la même couleur et Georgia (serif système). */
+  const C = { ink:'#1C2733', inkSoft:'#5F7183', line:'#D7E0E9', accent:'#1F5C8B',
+              accentSoft:'#DCE9F4', good:'#3E7A52', goodBg:'#E3EFE6',
+              warn:'#B3362B', warnBg:'#FAE3E0' };
+  /* Comme à l'impression : pas de grille, seulement un filet sous chaque ligne. */
+  const TD = 'border:0;border-bottom:1px solid '+C.line+';padding:6px 8px 6px 0;vertical-align:top;font-size:9.5pt;';
+  const TH = 'border:0;border-bottom:2px solid '+C.accent+';padding:7px 8px 5px 0;text-align:left;'
+           + 'font-size:7.5pt;letter-spacing:.05em;color:'+C.accent+';text-transform:uppercase;font-weight:bold;';
+  const TDin  = TD + 'color:'+C.inkSoft+';';
+  const TDdiffL = TD + 'background:'+C.warnBg+';border-radius:6px 0 0 6px;';
+  const TDdiffIn = TD + 'background:'+C.warnBg+';color:'+C.inkSoft+';';
+  const TDdiff = TD + 'background:'+C.warnBg+';color:'+C.warn+';font-weight:bold;border-radius:0 6px 6px 0;';
+  const TBL = 'border-collapse:collapse;width:100%;margin:0 0 10px;';
 
-  let h = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="'+S.page+'">';
-  if(sendType==='pre') h += '<div style="background:#FDF3E3;border:1px solid #E5B769;color:#8A5A0B;padding:7px 10px;font-size:9.5pt;margin-bottom:10px;"><b>'+(lang==='en'?'PRELIMINARY REPORT':'PRÉ-RAPPORT')+'</b> — '+(lang==='en'?'subject to confirmation after the final walk-through on ':'sous réserve de confirmation après le contrôle final du ')+(checkFinal||'—')+'</div>';
-  h += '<h1 style="'+S.h1+'">'+(lang==='en'?'INVENTORY OF FIXTURES':'ÉTAT DES LIEUX')+'</h1>';
-  h += '<p style="'+S.addr+'">'+escapeHtml(currentProp.address||'')+'</p>';
-  h += '<table style="'+S.tbl+'"><tr>'
-     + '<td style="'+S.td+'"><b>'+(lang==='en'?'Tenant':'Locataire')+'</b></td><td style="'+S.td+'">'+(escapeHtml(tenant)||'—')+'</td>'
-     + '<td style="'+S.td+'"><b>'+(lang==='en'?'Landlord / agent':'Bailleur / mandataire')+'</b></td><td style="'+S.td+'">'+(escapeHtml(agent)||'—')+'</td></tr><tr>'
-     + '<td style="'+S.td+'"><b>'+(lang==='en'?'Move-in date':"Date d'entrée")+'</b></td><td style="'+S.td+'">'+(dateEntree||'—')+'</td>'
-     + '<td style="'+S.td+'"><b>'+(lang==='en'?'Move-out date':'Date de sortie')+'</b></td><td style="'+S.td+'">'+(dateSortie||'—')+'</td></tr>'
-     + '<tr><td style="'+S.td+'"><b>'+(lang==='en'?'Drawn up in':'Fait à')+'</b></td><td style="'+S.td+'" colspan="3">'+escapeHtml(lieu)+'</td></tr></table>';
+  let h = '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        + '<body style="font-family:Helvetica,Arial,sans-serif;color:'+C.ink+';font-size:10pt;">';
 
+  if(sendType==='pre'){
+    h += '<div style="background:'+C.warnBg+';border:1px solid '+C.warn+';border-radius:8px;color:'+C.warn+';padding:8px 10px;'
+       + 'font-size:9pt;font-weight:bold;text-align:center;margin-bottom:12px;">'
+       + (lang==='en'
+          ? 'PRELIMINARY REPORT — subject to confirmation after the final walk-through on '+(checkFinal||'—')
+          : 'PRÉ-RAPPORT — sous réserve de confirmation après le contrôle final du '+(checkFinal||'—'))
+       + '</div>';
+  }
+
+  /* --- En-tête : titre, adresse, encadré locataire/bailleur/dates --- */
+  h += '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21pt;color:'+C.accent+';text-align:center;margin:0 0 3px;">'
+     + (lang==='en'?'INVENTORY OF FIXTURES':'ÉTAT DES LIEUX') + '</div>';
+  h += '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:13pt;text-align:center;margin:0 0 12px;">'
+     + escapeHtml(currentProp.address||'') + '</div>';
+
+  const kiLab = 'font-size:7.5pt;letter-spacing:.05em;color:'+C.inkSoft+';text-transform:uppercase;';
+  const kiCell = 'border:0;padding:6px 12px;width:50%;vertical-align:top;';
+  h += '<table style="border-collapse:separate;width:100%;margin:0 0 8px;border:1px solid '+C.accent+';border-radius:12px;background:'+C.accentSoft+';"><tr><td style="padding:8px 6px;border:0;">'
+     + '<table style="border-collapse:collapse;width:100%;">'
+     + '<tr><td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Tenant':'Locataire')+'</div>'
+     + '<div style="font-size:15pt;font-weight:bold;color:'+C.accent+';">'+(escapeHtml(tenant)||'—')+'</div></td>'
+     + '<td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Landlord / agent':'Bailleur / mandataire')+'</div>'
+     + '<div style="font-size:11.5pt;font-weight:bold;">'+(escapeHtml(agent)||'—')+'</div></td></tr>'
+     + '<tr><td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Move-in date':"Date d'entrée")+'</div>'
+     + '<div style="font-size:11.5pt;font-weight:bold;">'+(dateEntree||'—')+'</div></td>'
+     + '<td style="'+kiCell+'"><div style="'+kiLab+'">'+(lang==='en'?'Move-out date':'Date de sortie')+'</div>'
+     + '<div style="font-size:11.5pt;font-weight:bold;">'+(dateSortie||'—')+'</div></td></tr></table>'
+     + '</td></tr></table>';
+
+  h += '<div style="text-align:center;font-size:8.5pt;color:'+C.inkSoft+';margin:0 0 10px;">'
+     + (lang==='en'?'Drawn up in ':'Fait à ')+escapeHtml(lieu)
+     + (tenantNewAddress ? ' · '+(lang==='en'?'Tenant forwarding address: ':'Nouvelle adresse du locataire : ')+escapeHtml(tenantNewAddress) : '')
+     + '</div>';
+
+  /* --- Clé de lecture + encadré légal (comme à l'impression) --- */
+  h += '<div style="font-size:8pt;color:'+C.inkSoft+';margin:0 0 8px;">'
+     + (lang==='en'
+        ? 'Reading key: for each item, the <b>Move-in</b> column shows the condition recorded at check-in and the <b>Move-out</b> column the condition at check-out (Qty = quantity).'
+        : 'Clé de lecture : pour chaque poste, la colonne <b>Entrée</b> indique l\u2019état constaté à l\u2019entrée et la colonne <b>Sortie</b> celui constaté à la sortie (Qté = quantité).')
+     + '</div>';
+  h += '<div style="background:'+C.accentSoft+';border:1px solid '+C.accent+';border-radius:12px;padding:10px 12px;font-size:8.5pt;line-height:1.45;margin:0 0 4px;">'
+     + (lang==='en' ? LEGAL_EN
+        : "L'état des lieux doit être établi de façon contradictoire entre les deux parties lors de la remise des clés au locataire et lors de leur restitution en fin de bail, conformément à l'article 3 de la loi n°89-462 du 6 juillet 1989. Il fait partie du contrat de location, dont il ne peut être dissocié. L'état des lieux d'entrée peut être complété par le locataire dans les 10 jours suivant sa tenue (et pendant le 1er mois de chauffe pour les éléments de chauffage).")
+     + '</div>';
+
+  /* --- Sections --- */
   const GROUPS_EN = {'État de la pièce':'Room condition','Mobilier':'Furniture','Meubles':'Furniture','Électroménager':'Appliances','Équipement':'Equipment'};
   const diffs = [];
+  const colHead = function(){
+    return '<tr><th style="'+TH+'width:44%;">'+(lang==='en'?'Item':'Poste')+'</th>'
+         + '<th style="'+TH+'width:28%;">'+(lang==='en'?'Move-in':'Entrée')+'</th>'
+         + '<th style="'+TH+'width:28%;">'+(lang==='en'?'Move-out':'Sortie')+'</th></tr>';
+  };
+  let secIdx = -1;
   for(const sec of currentProp.template){
+    secIdx++;
     const vRows = visibleRows(sec); if(vRows.length===0) continue;
-    h += '<h2 style="'+S.h2+'">'+(await tAsync(sec.title,lang))+'</h2>';
-    h += '<table style="'+S.tbl+'"><tr><th style="'+S.th+'">'+(lang==='en'?'Item':'Poste')+'</th><th style="'+S.th+'">'+(lang==='en'?'Move-in':'Entrée')+'</th><th style="'+S.th+'">'+(lang==='en'?'Move-out':'Sortie')+'</th></tr>';
+    const pal = roomPal(secIdx);
+    h += '<div style="background:'+pal.m+';color:#FFFFFF;border-radius:9px;padding:8px 12px;font-size:11pt;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;margin:16px 0 2px;">'
+       + (await tAsync(sec.title,lang)) + '</div>';
+    h += '<table style="'+TBL+'">' + colHead();
     for(const grp of sec.groups){
       const gRows = visibleGroupRows(grp); if(gRows.length===0) continue;
-      if(grp.title) h += '<tr><td colspan="3" style="'+S.td+'background:#F2F5F8;font-weight:bold;color:#1F5C8B;">'+(lang==='en'?(GROUPS_EN[grp.title]||await tAsync(grp.title,lang)):escapeHtml(grp.title))+'</td></tr>';
+      if(grp.title){
+        h += '<tr><td colspan="3" style="border:0;padding:10px 0 3px;font-weight:bold;color:'+pal.d+';font-size:8.5pt;">'
+           + (lang==='en'?(GROUPS_EN[grp.title]||await tAsync(grp.title,lang)):escapeHtml(grp.title)) + '</td></tr>';
+      }
       for(const row of gRows){
         const r = computeRowStrings(sec,row,lang);
-        const cell = r.isDiff ? S.diff : S.td;
-        h += '<tr><td style="'+S.td+'">'+(await tAsync(row.label,lang))+'</td><td style="'+S.td+'">'+r.entryHtml+'</td><td style="'+cell+'">'+r.sortieHtml+'</td></tr>';
+        h += '<tr><td style="'+(r.isDiff?TDdiffL:TD)+'">'+(await tAsync(row.label,lang))+'</td>'
+           + '<td style="'+(r.isDiff?TDdiffIn:TDin)+'">'+r.entryHtml+'</td>'
+           + '<td style="'+(r.isDiff?TDdiff:TDin)+'">'+r.sortieHtml+'</td></tr>';
         if(r.isDiff || r.note) diffs.push({room: await tAsync(sec.title,lang), label: await tAsync(row.label,lang), e:r.entryHtml, s:r.sortieHtml, note:r.note});
         const ep = (currentEdl.entry[row.id] && currentEdl.entry[row.id].photos) || [];
         const sp = (currentEdl.sortie[row.id] && currentEdl.sortie[row.id].photos) || [];
         if(ep.length || sp.length){
-          let cells = '';
-          for(const grpIds of [{ids:ep,lab:(lang==='en'?'Move-in':'Entrée')},{ids:sp,lab:(lang==='en'?'Move-out':'Sortie')}]){
-            for(const pid of grpIds.ids){
+          let groups = '';
+          for(const g of [{ids:ep,lab:(lang==='en'?'Move-in':'Entrée')},{ids:sp,lab:(lang==='en'?'Move-out':'Sortie')}]){
+            if(!g.ids.length) continue;
+            let imgs = '';
+            for(const pid of g.ids){
               const d = await photoGet(pid);
-              if(d) cells += '<span style="display:inline-block;margin:0 6px 4px 0;"><img src="'+d+'" width="170"><br><span style="font-size:7.5pt;color:#5F7183;">'+grpIds.lab+'</span></span>';
+              if(d) imgs += '<img src="'+d+'" width="118" height="88" style="border:1px solid '+C.line+';border-radius:6px;margin:0 6px 0 0;">';
             }
+            if(!imgs) continue;
+            groups += '<table style="border-collapse:collapse;width:100%;margin:2px 0 6px;"><tr>'
+                    + '<td style="border:0;padding:5px 8px 0 8px;width:64px;vertical-align:top;font-size:7.5pt;font-weight:bold;'
+                    + 'text-transform:uppercase;letter-spacing:.04em;color:'+C.inkSoft+';">'+g.lab+'</td>'
+                    + '<td style="border:0;padding:0;vertical-align:top;">'+imgs+'</td></tr></table>';
           }
-          if(cells) h += '<tr><td colspan="3" style="'+S.td+'">'+cells+'</td></tr>';
+          if(groups) h += '<tr><td colspan="3" style="border:0;padding:0;">'+groups+'</td></tr>';
         }
       }
     }
     h += '</table>';
   }
 
-  h += '<h2 style="'+S.h2+'">'+t('Observations générales',lang)+'</h2>';
-  h += '<p style="font-size:9.5pt;">'+(obs ? escapeHtml(obs).replace(/\n/g,'<br>') : t('Aucune observation particulière.',lang))+'</p>';
+  /* --- Observations --- */
+  h += '<div style="background:'+C.accent+';color:#FFFFFF;border-radius:9px;padding:8px 12px;font-size:11pt;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;margin:16px 0 8px;">'
+     + t('Observations générales',lang) + '</div>';
+  h += '<div style="font-size:9.5pt;">'+(obs ? escapeHtml(obs).replace(/\n/g,'<br>') : t('Aucune observation particulière.',lang))+'</div>';
 
-  h += '<h2 style="'+S.h2+'">'+t('Récapitulatif des écarts',lang)+' ('+diffs.length+')</h2>';
-  if(!diffs.length) h += '<p style="font-size:9.5pt;color:#2E7D4F;">'+t("Aucun écart constaté par rapport à l'état des lieux d'entrée.",lang)+'</p>';
-  else{
-    h += '<table style="'+S.tbl+'"><tr><th style="'+S.th+'">'+(lang==='en'?'Item':'Poste')+'</th><th style="'+S.th+'">'+(lang==='en'?'Move-in':'Entrée')+'</th><th style="'+S.th+'">'+(lang==='en'?'Move-out':'Sortie')+'</th></tr>';
+  /* --- Récapitulatif des écarts --- */
+  h += '<div style="background:'+C.accent+';color:#FFFFFF;padding:6px 10px;font-size:11pt;font-weight:bold;margin:14px 0 6px;">'
+     + t('Récapitulatif des écarts',lang) + ' (' + diffs.length + ')</div>';
+  if(!diffs.length){
+    h += '<div style="font-size:9.5pt;color:'+C.good+';">'+t("Aucun écart constaté par rapport à l'état des lieux d'entrée.",lang)+'</div>';
+  } else {
+    h += '<table style="'+TBL+'">' + colHead();
     diffs.forEach(function(d){
-      h += '<tr><td style="'+S.td+'">'+d.room+' — '+d.label+'</td><td style="'+S.td+'">'+d.e+'</td><td style="'+S.diff+'">'+d.s+'</td></tr>';
-      if(d.note) h += '<tr><td colspan="3" style="'+S.td+'font-style:italic;color:#5F7183;">'+escapeHtml(d.note)+'</td></tr>';
+      h += '<tr><td style="'+TDdiffL+'">'+d.room+' — '+d.label+'</td>'
+         + '<td style="'+TDdiffIn+'">'+d.e+'</td><td style="'+TDdiff+'">'+d.s+'</td></tr>';
+      if(d.note) h += '<tr><td colspan="3" style="border:0;padding:3px 0 8px;font-style:italic;color:'+C.inkSoft+';font-size:8.5pt;">'+escapeHtml(d.note)+'</td></tr>';
     });
     h += '</table>';
   }
 
-  function sigImg(id){
+  /* --- Signatures --- */
+  function sigBox(id){
     const c = document.getElementById(id);
-    if(!c || c.dataset.signed!=='1') return '<i style="color:#B4690E;">'+t('non signé',lang)+'</i>';
+    if(!c || c.dataset.signed!=='1'){
+      return '<div style="border:1px dashed '+C.line+';border-radius:6px;height:70px;line-height:70px;text-align:center;color:'+C.warn+';font-size:9pt;">'+t('non signé',lang)+'</div>';
+    }
     let d=''; try{ d=c.toDataURL(); }catch(_){ }
     let stamp='';
     if(c.dataset.signedAt){
       const dt=new Date(c.dataset.signedAt);
-      if(!isNaN(dt)){ const p=n=>String(n).padStart(2,'0');
-        stamp='<br><span style="font-size:7.5pt;color:#2E7D4F;">'+(lang==='en'?'signed on ':'signé le ')+p(dt.getDate())+'/'+p(dt.getMonth()+1)+'/'+dt.getFullYear()+'</span>'; }
+      if(!isNaN(dt)){
+        const p=function(n){ return String(n).padStart(2,'0'); };
+        stamp = '<div style="font-size:7.5pt;color:'+C.good+';font-weight:bold;margin-top:3px;">'+t('signé',lang)+' \u2713 · '
+              + (lang==='en'?'signed on ':'signé le ')+p(dt.getDate())+'/'+p(dt.getMonth()+1)+'/'+dt.getFullYear()
+              + (lang==='en'?' at ':' à ')+p(dt.getHours())+'h'+p(dt.getMinutes())+'</div>';
+      }
     }
-    return d ? '<img src="'+d+'" height="55">'+stamp : '';
+    return (d ? '<img src="'+d+'" height="70" style="border:1px solid '+C.line+';border-radius:6px;background:#FFFFFF;">' : '') + stamp;
   }
-  h += '<h2 style="'+S.h2+'">'+t('Signatures',lang)+'</h2>';
-  h += '<table style="'+S.tbl+'">'
-     + '<tr><th style="'+S.th+'">'+(lang==='en'?'Check-in':"État d'entrée")+'</th><th style="'+S.th+'">'+t('Bailleur',lang)+'</th><th style="'+S.th+'">'+t('Locataire',lang)+'</th></tr>'
-     + '<tr><td style="'+S.td+'"></td><td style="'+S.td+'">'+sigImg('sigEntreeBailleur')+'</td><td style="'+S.td+'">'+sigImg('sigEntreeLocataire')+'</td></tr>'
-     + '<tr><th style="'+S.th+'">'+(lang==='en'?'Check-out':'État de sortie')+'</th><th style="'+S.th+'">'+t('Bailleur',lang)+'</th><th style="'+S.th+'">'+t('Locataire',lang)+'</th></tr>'
-     + '<tr><td style="'+S.td+'"></td><td style="'+S.td+'">'+sigImg('sigSortieBailleur')+'</td><td style="'+S.td+'">'+sigImg('sigSortieLocataire')+'</td></tr>';
+  function sigRow(momentLabel, bId, lId){
+    let out = '<div style="font-size:8.5pt;font-weight:bold;color:'+C.accent+';text-transform:uppercase;letter-spacing:.04em;margin:12px 0 5px;">'+momentLabel+'</div>';
+    const sigTd = 'border:0;padding:0 14px 8px 0;width:50%;vertical-align:top;';
+    out += '<table style="'+TBL+'"><tr>'
+         + '<td style="'+sigTd+'"><div style="font-size:8pt;color:'+C.inkSoft+';margin-bottom:3px;">'+t('Bailleur',lang)+(agent?' — '+escapeHtml(agent):'')+'</div>'+sigBox(bId)+'</td>'
+         + '<td style="'+sigTd+'"><div style="font-size:8pt;color:'+C.inkSoft+';margin-bottom:3px;">'+t('Locataire',lang)+(tenant?' — '+escapeHtml(tenant):'')+'</div>'+(lId?sigBox(lId):'')+'</td>'
+         + '</tr></table>';
+    return out;
+  }
+  h += '<div style="background:'+C.accent+';color:#FFFFFF;border-radius:9px;padding:8px 12px;font-size:11pt;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;margin:16px 0 4px;">'
+     + t('Signatures',lang) + '</div>';
+  h += sigRow(lang==='en'?'Check-in':"État d'entrée", 'sigEntreeBailleur','sigEntreeLocataire');
+  h += sigRow(lang==='en'?'Check-out':'État de sortie', 'sigSortieBailleur','sigSortieLocataire');
   if(sendType==='pre'){
-    h += '<tr><th style="'+S.th+'">'+(lang==='en'?'Final check':'Contrôle final')+(checkFinal?' — '+checkFinal:'')+'</th><th style="'+S.th+'">'+t('Bailleur',lang)+'</th><th style="'+S.th+'"></th></tr>'
-       + '<tr><td style="'+S.td+'"></td><td style="'+S.td+'">'+sigImg('sigCheckFinalBailleur')+'</td><td style="'+S.td+'"></td></tr>';
+    h += sigRow((lang==='en'?'Final check':'Contrôle final')+(checkFinal?' — '+checkFinal:''), 'sigCheckFinalBailleur', null);
   }
-  h += '</table>';
-  h += '<p style="font-size:8pt;color:#5F7183;margin-top:12px;">'+(lang==='en'?'':"L'état des lieux est établi de façon contradictoire, conformément à l'article 3 de la loi n°89-462 du 6 juillet 1989.")+'</p>';
+
   h += '</body></html>';
   return h;
 }
@@ -2637,7 +2719,7 @@ async function sendViaScript(lang, sendType, dateSortie, diffCount){
   const urlEl = document.getElementById('mailerUrl');
   const url = (urlEl && urlEl.value || '').trim();
   if(!url){
-    alert(L("Aucun service d'envoi configuré.\n\nCollez l'URL de votre script Google (champ « Service d'envoi automatique ») dans la fiche de l'état des lieux.","No sending service configured.\n\nPaste your Google Script URL in the \"Automatic sending service\" field."));
+    alert(L("Aucun service d'envoi configuré.\n\nCollez l'URL de votre script Google dans le champ « Service d'envoi automatique » de la fiche.","No sending service configured.\n\nPaste your Google Script URL in the \"Automatic sending service\" field."));
     return;
   }
   const to = (document.getElementById('tenantEmail').value||'').trim();
@@ -2645,37 +2727,118 @@ async function sendViaScript(lang, sendType, dateSortie, diffCount){
   if(!to){ alert(L("Merci de renseigner l'email du locataire avant l'envoi.","Please enter the tenant's email before sending.")); return; }
   const agent = document.getElementById('agentName').value || currentProp.mandataire || '';
   const btn = document.getElementById('autoSendBtn');
-  const setBtn = (txt, dis)=>{ if(btn){ btn.textContent = txt; btn.disabled = !!dis; } };
+  const setBtn = function(txt, dis){ if(btn){ btn.textContent = txt; btn.disabled = !!dis; } };
+
   setBtn(L('Préparation du document…','Preparing document…'), true);
+  let html;
   try{
-    const html = await buildEmailHtml(lang, sendType);
-    setBtn(L('Envoi en cours…','Sending…'), true);
-    const subject = lang==='en'
-      ? (sendType==='pre'?'[Preliminary] ':'')+'Inventory of fixtures — '+currentProp.address+' — '+dateSortie
-      : (sendType==='pre'?'[Pré-rapport] ':'')+'État des lieux — '+currentProp.address+' — '+dateSortie;
-    const bodyText = lang==='en'
-      ? 'Hello,\n\nPlease find attached the inventory of fixtures for '+currentProp.address+'.\n\n'+(diffCount>0?'Some discrepancies were noted compared with the move-in inventory (detailed in the PDF).':'No significant discrepancy was noted.')+'\n\nBest regards,\n'+agent
-      : 'Bonjour,\n\nVeuillez trouver ci-joint l\u2019état des lieux du '+currentProp.address+'.\n\n'+(diffCount>0?'Des écarts ont été constatés par rapport à l\u2019état des lieux d\u2019entrée (détail dans le PDF).':'Aucun écart significatif n\u2019a été constaté.')+'\n\nCordialement,\n'+agent;
-    const safeAddr = (currentProp.address||'etat-des-lieux').replace(/[^a-zA-Z0-9]+/g,'-').slice(0,40);
-    const filename = 'Etat-des-lieux-'+safeAddr+'-'+(dateSortie||'').replace(/\//g,'-');
+    html = await buildEmailHtml(lang, sendType);
+  }catch(e){
+    console.error('buildEmailHtml', e);
+    alert(L('Impossible de préparer le document : ','Could not prepare the document: ')+e.message);
+    setBtn('✉️ '+L('Envoyer automatiquement','Send automatically'), false);
+    return;
+  }
+  setBtn('✉️ '+L('Envoyer automatiquement','Send automatically'), false);
+
+  const subject = lang==='en'
+    ? (sendType==='pre'?'[Preliminary] ':'')+'Inventory of fixtures — '+currentProp.address+' — '+dateSortie
+    : (sendType==='pre'?'[Pré-rapport] ':'')+'État des lieux — '+currentProp.address+' — '+dateSortie;
+  const bodyText = lang==='en'
+    ? 'Hello,\n\nPlease find attached the inventory of fixtures for '+currentProp.address+'.\n\n'+(diffCount>0?'Some discrepancies were noted compared with the move-in inventory (detailed in the PDF).':'No significant discrepancy was noted.')+'\n\nBest regards,\n'+agent
+    : 'Bonjour,\n\nVeuillez trouver ci-joint l\u2019état des lieux du '+currentProp.address+'.\n\n'+(diffCount>0?'Des écarts ont été constatés par rapport à l\u2019état des lieux d\u2019entrée (détail dans le PDF).':'Aucun écart significatif n\u2019a été constaté.')+'\n\nCordialement,\n'+agent;
+  const safeAddr = (currentProp.address||'etat-des-lieux').replace(/[^a-zA-Z0-9]+/g,'-').slice(0,40);
+  const filename = 'Etat-des-lieux-'+safeAddr+'-'+(dateSortie||'').replace(/\//g,'-');
+
+  showSendPreview({lang:lang, to:to, cc:cc, subject:subject, bodyText:bodyText, html:html, filename:filename, fromName:agent, url:url});
+}
+
+/* Aperçu et retouche du message avant l'envoi définitif */
+function showSendPreview(d){
+  const old = document.getElementById('sendPreview'); if(old) old.remove();
+  const lang = d.lang;
+  const m = document.createElement('div');
+  m.id = 'sendPreview';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(20,35,50,.55);z-index:250;display:flex;align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:92vh;overflow-y:auto;padding:18px;">'
+    + '<h3 style="margin:0 0 3px;font-size:16px;">'+(lang==='en'?'Review before sending':'Vérifier avant envoi')+'</h3>'
+    + '<p style="margin:0 0 12px;font-size:12px;color:var(--ink-soft);">'
+    + (lang==='en'?'You can edit the recipients, the subject and the message. The PDF is attached automatically.'
+                  :'Vous pouvez modifier les destinataires, l\u2019objet et le message. Le PDF est joint automatiquement.')+'</p>'
+    + '<div class="field"><label>'+(lang==='en'?'To (tenant)':'Destinataire (locataire)')+'</label><input type="email" id="spTo"></div>'
+    + '<div class="field" style="margin-top:8px;"><label>'+(lang==='en'?'Cc (landlord)':'Copie (bailleur)')+'</label><input type="email" id="spCc"></div>'
+    + '<div class="field" style="margin-top:8px;"><label>'+(lang==='en'?'Subject':'Objet')+'</label><input type="text" id="spSubject"></div>'
+    + '<div class="field" style="margin-top:8px;"><label>'+(lang==='en'?'Message':'Message')+'</label>'
+    + '<textarea id="spBody" style="width:100%;min-height:150px;font:inherit;font-size:13px;padding:9px;border:1.5px solid var(--line);border-radius:9px;resize:vertical;"></textarea></div>'
+    + '<div style="margin-top:8px;font-size:12px;color:var(--ink-soft);">📎 '+escapeHtml(d.filename)+'.pdf '
+    + '— <span id="spPreviewLink" style="color:var(--accent);text-decoration:underline;cursor:pointer;">'
+    + (lang==='en'?'preview the document':'voir le document joint')+'</span></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;">'
+    + '<button class="btn-secondary" id="spCancel">'+(lang==='en'?'Cancel':'Annuler')+'</button>'
+    + '<button class="btn-primary" id="spSend">✉️ '+(lang==='en'?'Send now':'Envoyer maintenant')+'</button>'
+    + '</div></div>';
+  document.body.appendChild(m);
+  document.getElementById('spTo').value = d.to;
+  document.getElementById('spCc').value = d.cc;
+  document.getElementById('spSubject').value = d.subject;
+  document.getElementById('spBody').value = d.bodyText;
+
+  document.getElementById('spPreviewLink').onclick = function(){ previewAttachment(d.html); };
+  document.getElementById('spCancel').onclick = function(){ m.remove(); };
+  document.getElementById('spSend').onclick = function(){
+    const payload = {
+      to: document.getElementById('spTo').value.trim(),
+      cc: document.getElementById('spCc').value.trim(),
+      subject: document.getElementById('spSubject').value,
+      bodyText: document.getElementById('spBody').value,
+      html: d.html, filename: d.filename, fromName: d.fromName
+    };
+    if(!payload.to){ alert(L("Le destinataire est vide.","Recipient is empty.")); return; }
+    const sendBtn = document.getElementById('spSend');
+    sendBtn.disabled = true; sendBtn.textContent = L('Envoi en cours…','Sending…');
+    doSend(d.url, payload, lang, m);
+  };
+}
+
+function previewAttachment(html){
+  // Ouvre le document exactement tel qu'il sera converti en PDF.
+  try{
+    const w = window.open('', '_blank');
+    if(w && w.document){ w.document.open(); w.document.write(html); w.document.close(); return; }
+  }catch(e){ console.error('preview', e); }
+  try{
+    const blob = new Blob([html], {type:'text/html'});
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=u; a.target='_blank'; a.rel='noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }catch(e){ alert(L("Aperçu impossible : autorisez les fenêtres surgissantes.","Preview blocked: please allow pop-ups.")); }
+}
+
+async function doSend(url, payload, lang, modal){
+  try{
     // Corps en text/plain : évite le contrôle CORS préalable, que Apps Script ne gère pas.
-    const res = await fetch(url, { method:'POST', body: JSON.stringify({to:to, cc:cc, subject:subject, bodyText:bodyText, html:html, filename:filename, fromName:agent}) });
+    const res = await fetch(url, { method:'POST', body: JSON.stringify(payload) });
     let data = null;
     try{ data = await res.json(); }catch(_){}
+    if(modal) modal.remove();
     if(data && data.ok){
-      alert(L('Email envoyé ✓\n\nDestinataire : ','Email sent ✓\n\nTo: ')+to+(cc?L('\nCopie : ','\nCc: ')+cc:''));
+      alert(L('Email envoyé ✓\n\nDestinataire : ','Email sent ✓\n\nTo: ')+payload.to+(payload.cc?L('\nCopie : ','\nCc: ')+payload.cc:''));
     } else if(data && data.error){
       alert(L('Le service a renvoyé une erreur :\n\n','The service returned an error:\n\n')+data.error);
     } else {
       alert(L("Envoi lancé, mais la réponse du service n'a pas pu être lue.\n\nVérifiez votre dossier « Messages envoyés » pour confirmer.","Sent, but the service response could not be read.\n\nCheck your Sent folder to confirm."));
     }
   }catch(e){
-    console.error('sendViaScript', e);
+    console.error('doSend', e);
+    if(modal){
+      const b = document.getElementById('spSend');
+      if(b){ b.disabled=false; b.textContent = '✉️ '+L('Envoyer maintenant','Send now'); }
+    }
     alert(L("Échec de l'envoi : ","Sending failed: ")+e.message+L("\n\nVérifiez votre connexion internet et l'URL du service.","\n\nCheck your internet connection and the service URL."));
-  }finally{
-    setBtn('✉️ '+L('Envoyer automatiquement','Send automatically'), false);
   }
 }
+
 function closeReport(){ document.getElementById('overlay').classList.remove('show'); }
 
 function sendEmail(lang, sendType, dateSortie, diffCount){
