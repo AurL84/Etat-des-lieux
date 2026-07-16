@@ -207,10 +207,9 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
 .photo-count{font-size:11px;color:var(--ink-soft);}
 .locked .photo-add-btn,.locked .photo-del{pointer-events:none;opacity:.45;}
 /* Photos dans le rapport */
-.rep-photo-group{display:flex;gap:8px;align-items:flex-start;margin:2px 0 8px;padding-left:8px;break-inside:avoid;page-break-inside:avoid;}
-.rep-photo-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding-top:5px;flex-shrink:0;width:56px;}
-.rep-photo-strip{display:flex;gap:6px;flex-wrap:wrap;}
-.rep-photo{width:118px;height:88px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
+.report-line.photo-row{padding-top:2px;padding-bottom:8px;break-inside:avoid;page-break-inside:avoid;}
+.rep-photo-strip{display:flex;gap:6px;flex-wrap:wrap;align-content:flex-start;}
+.rep-photo{width:112px;height:84px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
 .report-doctitle{font-family:'DM Serif Display',Georgia,serif;font-size:27px;line-height:1.1;letter-spacing:.02em;color:var(--accent);text-align:center;margin:0 0 4px;}
 .report-address{font-size:16px;text-align:center;color:var(--ink);margin:0 0 14px;}
 .report-keyinfo{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:14px 18px;}
@@ -2052,23 +2051,26 @@ async function renderPhotoBar(rowId){
 function renderAllPhotoBars(){
   document.querySelectorAll('.photo-bar[data-row-id]').forEach(function(b){ renderPhotoBar(b.dataset.rowId); });
 }
-async function photoStripHTML(ids, label){
+async function photoCellHTML(ids){
   if(!ids || !ids.length) return '';
   let imgs = '';
   for(const pid of ids){
     const d = await photoGet(pid);
     if(d) imgs += '<img src="'+d+'" class="rep-photo">';
   }
-  if(!imgs) return '';
-  return '<div class="rep-photo-group"><span class="rep-photo-label">'+label+'</span><div class="rep-photo-strip">'+imgs+'</div></div>';
+  return imgs;
 }
 async function photoLineHTML(rowId, lang){
   const ep = (currentEdl.entry[rowId] && currentEdl.entry[rowId].photos) || [];
   const sp = (currentEdl.sortie[rowId] && currentEdl.sortie[rowId].photos) || [];
   if(!ep.length && !sp.length) return '';
-  const a = await photoStripHTML(ep, lang==='en'?'Move-in':'Entrée');
-  const b = await photoStripHTML(sp, lang==='en'?'Move-out':'Sortie');
-  return a + b;
+  const a = await photoCellHTML(ep);
+  const b = await photoCellHTML(sp);
+  if(!a && !b) return '';
+  // Alignées sur les colonnes : entrée sous « Entrée », sortie sous « Sortie ».
+  return '<div class="report-line photo-row"><span class="lbl"></span>'
+       + '<span class="rep-photo-strip">'+a+'</span>'
+       + '<span class="rep-photo-strip">'+b+'</span></div>';
 }
 function countPhotos(){
   let n = 0;
@@ -2634,21 +2636,21 @@ async function buildEmailHtml(lang, sendType){
         const ep = (currentEdl.entry[row.id] && currentEdl.entry[row.id].photos) || [];
         const sp = (currentEdl.sortie[row.id] && currentEdl.sortie[row.id].photos) || [];
         if(ep.length || sp.length){
-          let groups = '';
-          for(const g of [{ids:ep,lab:(lang==='en'?'Move-in':'Entrée')},{ids:sp,lab:(lang==='en'?'Move-out':'Sortie')}]){
-            if(!g.ids.length) continue;
-            let imgs = '';
-            for(const pid of g.ids){
+          const imgsOf = async function(ids){
+            let out = '';
+            for(const pid of ids){
               const d = await photoGet(pid);
-              if(d) imgs += '<img src="'+d+'" width="118" height="88" style="border:1px solid '+C.line+';border-radius:6px;margin:0 6px 0 0;">';
+              if(d) out += '<img src="'+d+'" width="112" height="84" style="border:1px solid '+C.line+';border-radius:6px;margin:0 5px 5px 0;">';
             }
-            if(!imgs) continue;
-            groups += '<table style="border-collapse:collapse;width:100%;margin:2px 0 6px;"><tr>'
-                    + '<td style="border:0;padding:5px 8px 0 8px;width:64px;vertical-align:top;font-size:7.5pt;font-weight:bold;'
-                    + 'text-transform:uppercase;letter-spacing:.04em;color:'+C.inkSoft+';">'+g.lab+'</td>'
-                    + '<td style="border:0;padding:0;vertical-align:top;">'+imgs+'</td></tr></table>';
+            return out;
+          };
+          const a = await imgsOf(ep), b = await imgsOf(sp);
+          if(a || b){
+            const pTd = 'border:0;border-bottom:1px solid '+C.line+';padding:2px 8px 8px 0;vertical-align:top;';
+            h += '<tr><td style="border:0;border-bottom:1px solid '+C.line+';"></td>'
+               + '<td style="'+pTd+'">'+a+'</td>'
+               + '<td style="'+pTd+'">'+b+'</td></tr>';
           }
-          if(groups) h += '<tr><td colspan="3" style="border:0;padding:0;">'+groups+'</td></tr>';
         }
       }
     }
