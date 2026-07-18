@@ -417,7 +417,7 @@ canvas.sigpad{width:100%;height:150px;background:#fff;border:1px dashed var(--li
 </main>
 
 <div class="bottom-bar">
-  <button class="btn-secondary" onclick="resetCurrentEdl()" data-fr-text="Réinitialiser">Réinitialiser</button>
+  <button class="btn-secondary" id="resetModeBtn" onclick="resetCurrentMode()">Réinitialiser l'entrée</button>
   <button class="btn-primary" onclick="openReport()" data-fr-text="Générer le rapport">Générer le rapport</button>
 </div>
 </div>
@@ -1174,6 +1174,7 @@ function updateSigVisibility(){
 }
 function setMode(m){
   mode = m;
+  updateResetBtnLabel();
   document.getElementById('modeEntreeBtn').classList.toggle('active', m==='entree');
   document.getElementById('modeSortieBtn').classList.toggle('active', m==='sortie');
   document.getElementById('archiveBtn').classList.toggle('hidden', !(m==='entree' && !currentEdl.entryArchived));
@@ -2079,7 +2080,7 @@ function countPhotos(){
   });
   return n;
 }
-const APP_VERSION = 'v5 — remarques par poste';
+const APP_VERSION = 'v6 — cadre écart + reset entrée/sortie';
 const SIG_IDS = ['sigEntreeBailleur','sigEntreeLocataire','sigSortieBailleur','sigSortieLocataire','sigCheckFinalBailleur'];
 function sizeSignatures(preserve){
   SIG_IDS.forEach(function(id){ sizeSigCanvas(id, preserve!==false); });
@@ -2242,11 +2243,33 @@ async function saveNow(){
     const ind=document.getElementById('saveIndicator'); ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'),1200);
   }catch(e){ console.error('Erreur de sauvegarde', e); warnStorageOnce(); }
 }
+async function resetCurrentMode(){
+  const isEntree = mode==='entree';
+  const quoi = isEntree ? L("l'état des lieux d'entrée","the move-in inventory")
+                        : L('l\u2019état des lieux de sortie','the move-out inventory');
+  if(!confirm(L('Effacer toutes les données saisies pour '+quoi+' ? La trame du logement et l\u2019autre état des lieux sont conservés.',
+                'Clear all data entered for '+quoi+'? The property template and the other inventory are kept.'))) return;
+  if(isEntree){
+    currentEdl.entry={};
+    currentEdl.entryArchived=false; currentEdl.entryArchivedAt=null;
+    clearSigCanvas('sigEntreeBailleur'); clearSigCanvas('sigEntreeLocataire'); clearSigCanvas('sigCheckFinalBailleur');
+  } else {
+    currentEdl.sortie={};
+    clearSigCanvas('sigSortieBailleur'); clearSigCanvas('sigSortieLocataire');
+  }
+  seedMissing(); await saveNow(); render(); updateResetBtnLabel();
+}
 async function resetCurrentEdl(){
   if(!confirm("Effacer toutes les données saisies (entrée et sortie) pour ce locataire ? La trame du logement est conservée.")) return;
   currentEdl.entry={}; currentEdl.sortie={}; currentEdl.entryArchived=false; currentEdl.entryArchivedAt=null;
   document.getElementById('observations').value=''; SIG_IDS.forEach(clearSigCanvas);
   seedMissing(); await saveNow(); setMode('entree');
+}
+function updateResetBtnLabel(){
+  const b = document.getElementById('resetModeBtn');
+  if(!b) return;
+  b.textContent = mode==='entree' ? L("Réinitialiser l'entrée",'Reset move-in')
+                                  : L('Réinitialiser la sortie','Reset move-out');
 }
 
 /* ============ TEMPLATE EDITOR ============ */
@@ -2654,6 +2677,23 @@ function imgWarnBanner(text, C){
   }catch(e){ return ''; }
 }
 
+/* Ligne d'écart rendue comme un bloc encadré autonome.
+   Un cadre plein sur un tableau non fusionné est fiable côté convertisseur Google
+   (contrairement à border-collapse, où le trait haut peut être écrasé). */
+function diffRowHTML(labelHtml, entryHtml, sortieHtml, C, boldLabel){
+  var warn = C.warn, warnBg = C.warnBg, inkSoft = C.inkSoft;
+  var cellL = 'padding:6px 8px;vertical-align:top;font-size:9.5pt;width:44%;'+(boldLabel?'font-weight:bold;':'font-weight:bold;');
+  var cellI = 'padding:6px 8px;vertical-align:top;font-size:9.5pt;width:28%;color:'+inkSoft+';';
+  var cellS = 'padding:6px 8px;vertical-align:top;font-size:9.5pt;width:28%;color:'+warn+';font-weight:bold;';
+  // La cellule externe porte le cadre rouge complet (4 côtés) ; le fond rose est aussi tenté via bgcolor.
+  return '<tr><td colspan="3" style="padding:0;border:0;">'
+       + '<table bgcolor="'+warnBg+'" style="width:100%;border:2px solid '+warn+';border-collapse:separate;border-spacing:0;margin:2px 0;">'
+       + '<tr><td bgcolor="'+warnBg+'" style="'+cellL+'">'+labelHtml+'</td>'
+       + '<td bgcolor="'+warnBg+'" style="'+cellI+'">'+entryHtml+'</td>'
+       + '<td bgcolor="'+warnBg+'" style="'+cellS+'">'+sortieHtml+'</td></tr>'
+       + '</table></td></tr>';
+}
+
 async function buildEmailHtml(lang, sendType){
   const tenant = document.getElementById('tenantNameField').value || currentEdl.tenantName || '';
   const agent = document.getElementById('agentName').value || currentProp.mandataire || '';
@@ -2676,11 +2716,11 @@ async function buildEmailHtml(lang, sendType){
            + 'font-size:7.5pt;letter-spacing:.05em;color:'+C.accent+';text-transform:uppercase;font-weight:bold;';
   const TDin  = TD + 'color:'+C.inkSoft+';';
   /* Écarts : le fond coloré étant impossible, on cerne la ligne en rouge. */
-  const DBASE = 'border-top:1.5px solid '+C.warn+';border-bottom:1.5px solid '+C.warn+';padding:6px 8px 6px 6px;vertical-align:top;font-size:9.5pt;';
+  const DBASE = 'border-top:2.5px solid '+C.warn+' !important;border-bottom:2.5px solid '+C.warn+' !important;padding:6px 8px 6px 6px;vertical-align:top;font-size:9.5pt;';
   const TDdiffL = DBASE + 'border-left:3px solid '+C.warn+';background:'+C.warnBg+';font-weight:bold;';
   const TDdiffIn = DBASE + 'background:'+C.warnBg+';color:'+C.inkSoft+';';
   const TDdiff = DBASE + 'border-right:1.5px solid '+C.warn+';background:'+C.warnBg+';color:'+C.warn+';font-weight:bold;';
-  const TBL = 'border-collapse:collapse;width:100%;margin:0 0 10px;';
+  const TBL = 'border-collapse:separate;border-spacing:0;width:100%;margin:0 0 10px;';
 
   let h = '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
         + '<body style="font-family:Helvetica,Arial,sans-serif;color:'+C.ink+';font-size:10pt;">';
@@ -2743,10 +2783,13 @@ async function buildEmailHtml(lang, sendType){
       }
       for(const row of gRows){
         const r = computeRowStrings(sec,row,lang);
-        const bg = r.isDiff ? ' bgcolor="'+C.warnBg+'"' : '';
-        h += '<tr><td'+bg+' style="'+(r.isDiff?TDdiffL:TD)+'">'+(await tAsync(row.label,lang))+'</td>'
-           + '<td'+bg+' style="'+(r.isDiff?TDdiffIn:TDin)+'">'+r.entryHtml+'</td>'
-           + '<td'+bg+' style="'+(r.isDiff?TDdiff:TDin)+'">'+r.sortieHtml+'</td></tr>';
+        if(r.isDiff){
+          h += diffRowHTML(await tAsync(row.label,lang), r.entryHtml, r.sortieHtml, C, false);
+        } else {
+          h += '<tr><td style="'+TD+'">'+(await tAsync(row.label,lang))+'</td>'
+             + '<td style="'+TDin+'">'+r.entryHtml+'</td>'
+             + '<td style="'+TDin+'">'+r.sortieHtml+'</td></tr>';
+        }
         for(const n of rowNoteParts(r,lang)){
           h += '<tr><td colspan="3" style="border:0;border-bottom:1px solid '+C.line+';padding:0 8px 6px 0;font-size:8.5pt;font-style:italic;color:'+C.inkSoft+';"><b style="font-style:normal;color:'+C.accent+';">'+n.lab+' :</b> '+escapeHtml(lang==='en'? await translateFreeText(n.txt) : n.txt)+'</td></tr>';
         }
@@ -2786,9 +2829,7 @@ async function buildEmailHtml(lang, sendType){
   } else {
     h += '<table style="'+TBL+'">' + colHead();
     diffs.forEach(function(d){
-      h += '<tr><td bgcolor="'+C.warnBg+'" style="'+TDdiffL+'">'+d.room+' — '+d.label+'</td>'
-         + '<td bgcolor="'+C.warnBg+'" style="'+TDdiffIn+'">'+d.e+'</td>'
-         + '<td bgcolor="'+C.warnBg+'" style="'+TDdiff+'">'+d.s+'</td></tr>';
+      h += diffRowHTML(d.room+' — '+d.label, d.e, d.s, C, true);
       if(d.note) h += '<tr><td colspan="3" style="border:0;padding:3px 0 8px;font-style:italic;color:'+C.inkSoft+';font-size:8.5pt;">'+escapeHtml(d.note)+'</td></tr>';
     });
     h += '</table>';
