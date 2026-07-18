@@ -2079,7 +2079,7 @@ function countPhotos(){
   });
   return n;
 }
-const APP_VERSION = 'v4 — aplats en images';
+const APP_VERSION = 'v5 — remarques par poste';
 const SIG_IDS = ['sigEntreeBailleur','sigEntreeLocataire','sigSortieBailleur','sigSortieLocataire','sigCheckFinalBailleur'];
 function sizeSignatures(preserve){
   SIG_IDS.forEach(function(id){ sizeSigCanvas(id, preserve!==false); });
@@ -2386,6 +2386,15 @@ function moveRowInGroup(secId, gid, rowId, dir){
 /* ============ REPORT ============ */
 function fmtDate(d){ if(!d) return '—'; const parts=d.split('-'); if(parts.length!==3) return d; return parts[2]+'/'+parts[1]+'/'+parts[0]; }
 
+function rowNoteParts(r, lang){
+  const out = [];
+  const eLab = lang==='en'?'Move-in':'Entrée';
+  const sLab = lang==='en'?'Move-out':'Sortie';
+  if(r.entryNote) out.push({lab:eLab, txt:r.entryNote});
+  // On évite de répéter deux fois une note identique saisie des deux côtés.
+  if(r.sortieNote && r.sortieNote!==r.entryNote) out.push({lab:sLab, txt:r.sortieNote});
+  return out;
+}
 function computeRowStrings(sec, row, lang){
   const ref=currentEdl.entry[row.id]||{}, s=currentEdl.sortie[row.id]||{};
   let entryStr,sortieStr,isDiff=false;
@@ -2407,7 +2416,7 @@ function computeRowStrings(sec, row, lang){
   }
   else if(row.kind==='meter'){ entryStr=ref.meter||'—'; sortieStr=s.meter||(lang==='en'?'not read':'non relevé'); isDiff=false; }
   else { entryStr=valDisp(ref.value,lang)||'—'; sortieStr=s.value?valDisp(s.value,lang):nr; isDiff = !!(s.value && ref.value && s.value!==ref.value); }
-  return {isDiff, note:s.note, entryHtml:entryStr, sortieHtml:sortieStr};
+  return {isDiff, note:s.note, entryNote:ref.note, sortieNote:s.note, entryHtml:entryStr, sortieHtml:sortieStr};
 }
 
 async function openReport(){
@@ -2467,6 +2476,9 @@ async function openReport(){
       for(const row of gRows){
         const r = computeRowStrings(sec,row,lang);
         html += `<div class="report-line ${r.isDiff?'diff':''}"><span class="lbl">${await tAsync(row.label,lang)}</span><span class="c-in">${r.entryHtml}</span><span class="c-out">${r.sortieHtml}</span></div>`;
+        for(const n of rowNoteParts(r,lang)){
+          html += `<div class="report-note"><b>${n.lab} :</b> ${escapeHtml(lang==='en'? await translateFreeText(n.txt) : n.txt)}</div>`;
+        }
         const ph = await photoLineHTML(row.id, lang);
         if(ph) html += ph;
       }
@@ -2735,6 +2747,9 @@ async function buildEmailHtml(lang, sendType){
         h += '<tr><td'+bg+' style="'+(r.isDiff?TDdiffL:TD)+'">'+(await tAsync(row.label,lang))+'</td>'
            + '<td'+bg+' style="'+(r.isDiff?TDdiffIn:TDin)+'">'+r.entryHtml+'</td>'
            + '<td'+bg+' style="'+(r.isDiff?TDdiff:TDin)+'">'+r.sortieHtml+'</td></tr>';
+        for(const n of rowNoteParts(r,lang)){
+          h += '<tr><td colspan="3" style="border:0;border-bottom:1px solid '+C.line+';padding:0 8px 6px 0;font-size:8.5pt;font-style:italic;color:'+C.inkSoft+';"><b style="font-style:normal;color:'+C.accent+';">'+n.lab+' :</b> '+escapeHtml(lang==='en'? await translateFreeText(n.txt) : n.txt)+'</td></tr>';
+        }
         if(r.isDiff || r.note) diffs.push({room: await tAsync(sec.title,lang), label: await tAsync(row.label,lang), e:r.entryHtml, s:r.sortieHtml, note:r.note});
         const ep = (currentEdl.entry[row.id] && currentEdl.entry[row.id].photos) || [];
         const sp = (currentEdl.sortie[row.id] && currentEdl.sortie[row.id].photos) || [];
